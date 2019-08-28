@@ -1,0 +1,77 @@
+{
+  "name": "request-filtering-agent",
+  "version": "1.0.0",
+  "description": "A http(s).Agent implementation that filter request URLs by allow/deny list.",
+  "homepage": "https://github.com/azu/request-filtering-agent",
+  "bugs": {
+    "url": "https://github.com/azu/request-filtering-agent/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/azu/request-filtering-agent.git"
+  },
+  "license": "MIT",
+  "author": "azu",
+  "files": [
+    "bin/",
+    "lib/",
+    "src/"
+  ],
+  "keywords": [
+    "http",
+    "https",
+    "proxy",
+    "agent",
+    "ssrf",
+    "security"
+  ],
+  "main": "lib/request-filtering-agent.js",
+  "types": "lib/request-filtering-agent.d.ts",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "build": "cross-env NODE_ENV=production tsc -p .",
+    "clean": "rimraf lib/",
+    "prettier": "prettier --write \"**/*.{js,jsx,ts,tsx,css}\"",
+    "prepublish": "npm run --if-present build",
+    "test": "mocha \"test/**/*.ts\"",
+    "watch": "tsc -p . --watch"
+  },
+  "husky": {
+    "hooks": {
+      "precommit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,css}": [
+      "prettier --write",
+      "git add"
+    ]
+  },
+  "prettier": {
+    "printWidth": 120,
+    "singleQuote": false,
+    "tabWidth": 4
+  },
+  "devDependencies": {
+    "@types/ip": "^1.1.0",
+    "@types/mocha": "^5.2.7",
+    "@types/node": "^12.7.2",
+    "@types/node-fetch": "^2.5.0",
+    "cross-env": "^5.2.0",
+    "husky": "^3.0.4",
+    "lint-staged": "^9.2.5",
+    "mocha": "^6.2.0",
+    "node-fetch": "^2.6.0",
+    "prettier": "^1.18.2",
+    "rimraf": "^3.0.0",
+    "ts-node": "^8.3.0",
+    "ts-node-test-register": "^8.0.1",
+    "typescript": "^3.5.3"
+  },
+  "dependencies": {
+    "ip": "^1.1.5"
+  }
+}
