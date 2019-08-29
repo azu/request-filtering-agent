@@ -93,6 +93,8 @@ export declare const useAgent: (url: string) => RequestFilteringHttpAgent | Requ
 
 ### Example: Create an Agent with options
 
+An agent that allow to request `127.0.0.1`, but it dissllow other Private IP.
+
 ```js
 const fetch = require("node-fetch");
 const { RequestFilteringHttpAgent } = require("request-filtering-agent");
