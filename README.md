@@ -121,12 +121,12 @@ const agent = new RequestFilteringHttpAgent({
     keepAlive: true,
     allowPrivateIP: true, // Default: false
 });
-// 127.0.0.1 is private ip address, but it is allowed
+// 127.0.0.1 is private ip address
 const url = 'http://127.0.0.1:8080/';
 fetch(url, {
     agent: agent
-}).then(res => {
-    console.log(res); // OK
+}).catch(error => {
+    console.error(error); // Disallowed
 })
 ```
 
