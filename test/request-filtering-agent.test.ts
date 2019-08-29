@@ -160,7 +160,18 @@ describe("request-filtering-agent", function() {
     });
     it("should not request because the dns-lookuped address is private", async () => {
         const privateIPs = [
-            `http://017700000001:${TEST_PORT}`, // long ip - lookup
+            // https://www.psyon.org/tools/ip_address_converter.php?ip=127.0.0.1
+            `http://127.0.1:${TEST_PORT}`, // Decimal
+            `http://127.1:${TEST_PORT}`, // Decimal
+            // `http://21307064331:${TEST_PORT}`, // Decimal
+            // `http://0177.00.00.01:${TEST_PORT}`, // Octal
+            `http://0177.00.01:${TEST_PORT}`, // Octal
+            `http://0177.01:${TEST_PORT}`, // Octal
+            `http://017700000001:${TEST_PORT}`, // Octal
+            `http://0x7f.0x0.0x0.0x1:${TEST_PORT}`, // Hexidecimal
+            `http://0x7f.0x0.0x1:${TEST_PORT}`, // Hexidecimal
+            `http://0x7f.0x1:${TEST_PORT}`, // Hexidecimal
+            `http://0x7f000001:${TEST_PORT}`, // Hexidecimal
             `http://127.0.0.1.nip.io:${TEST_PORT}/`, // wildcard domain
             `https://127.0.0.1.nip.io:${TEST_PORT}/`, // wildcard domain
             `http://localhost:${TEST_PORT}`,
