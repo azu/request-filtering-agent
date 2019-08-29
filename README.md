@@ -1,4 +1,4 @@
-# request-filtering-agent
+# request-filtering-agent [![Build Status](https://travis-ci.org/azu/request-filtering-agent.svg?branch=master)](https://travis-ci.org/azu/request-filtering-agent)
 
 A http(s).Agent implementation that filter request URLs by allow/deny list.
 
@@ -81,6 +81,7 @@ fetch(url, {
 ## Related
 
 - [welefen/ssrf-agent: make http(s) request to prevent SSRF](https://github.com/welefen/ssrf-agent)
+    - It provide only high level wrapper
 
 ## Changelog
 
