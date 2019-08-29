@@ -106,27 +106,29 @@ fetch(url, {
 })
 ```
 
-### Example: Custom http.Agent Options
+### Example: Apply request filtering to exisint http.Agent
 
-`RequestFilteringHttpAgent` and `RequestFilteringHttpsAgent` accept Node.js's [http.Agent](https://nodejs.org/api/http.html#http_class_http_agent) options. 
-Because, These is subclass of `http.Agent` and `https.Agent`.
+You can apply request filtering to `http.Agent` or `https.Agent` using `applyRequestFilter` method.
 
 ```js
+const http = require("http")
 const fetch = require("node-fetch");
-const { RequestFilteringHttpAgent } = require("request-filtering-agent");
+const { applyRequestFilter } = require("request-filtering-agent");
 
-// Create http agent that allow 127.0.0.1, but it disallow other private ip
-const agent = new RequestFilteringHttpAgent({
-    // http.Agent'S keepAlive options
+// Create http agent with keepAlive option
+const agent = new http.Agent({
     keepAlive: true,
-    allowPrivateIP: true, // Default: false
+});
+// Apply request filtering to http.Agent
+const agentWithFiltering = applyRequestFilter(agent, {
+    allowPrivateIP: false // Default: false
 });
 // 127.0.0.1 is private ip address
 const url = 'http://127.0.0.1:8080/';
 fetch(url, {
-    agent: agent
+    agent: agentWithFiltering
 }).catch(error => {
-    console.error(error); // Disallowed
+    console.error(error); // Dis-allowed
 })
 ```
 

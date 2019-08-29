@@ -1,10 +1,10 @@
 import * as assert from "assert";
 import fetch from "node-fetch";
-import { globalHttpAgent, RequestFilteringHttpAgent, useAgent } from "../src/request-filtering-agent";
+import { globalHttpAgent, RequestFilteringHttpAgent, useAgent, applyRequestFilter } from "../src/request-filtering-agent";
 import * as http from "http";
 
 const TEST_PORT = 12456;
-describe("request-filtering-agent", function() {
+describe("request-filtering-agent", function () {
     let close = () => {
         return Promise.resolve();
     };
@@ -47,6 +47,27 @@ describe("request-filtering-agent", function() {
             try {
                 await fetch(ipAddress, {
                     agent,
+                    timeout: 2000
+                });
+            } catch (error) {
+                assert.fail(new Error("should fetch, because it is allow"));
+            }
+        }
+    });
+    it("apply request filtering to existing http.Agent", async () => {
+        const agent = new http.Agent({
+            keepAlive: true
+        });
+        const agentWithFiltering = applyRequestFilter(agent, {
+            allowPrivateIP: true
+        });
+        const privateIPs = [
+            `http://127.0.0.1:${TEST_PORT}`
+        ];
+        for (const ipAddress of privateIPs) {
+            try {
+                await fetch(ipAddress, {
+                    agent: agentWithFiltering,
                     timeout: 2000
                 });
             } catch (error) {
@@ -131,7 +152,7 @@ describe("request-filtering-agent", function() {
             }
         }
     });
-    // FIXME:
+    // FIXME: timout is not testable
     it("should not request because it is not resolve - timeout", async () => {
         const privateIPs = [
             // link address

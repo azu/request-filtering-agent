@@ -62,29 +62,35 @@ const addDropFilterSocket = (options: Required<RequestFilteringAgentOptions>, so
     });
 };
 
-export class RequestFilteringHttpAgent extends http.Agent {
-    private requestFilterOptions: Required<RequestFilteringAgentOptions>;
-
-    constructor(options?: http.AgentOptions & RequestFilteringAgentOptions) {
-        super(options);
-        this.requestFilterOptions = {
-            allowPrivateIP: options && options.allowPrivateIP !== undefined ? options.allowPrivateIP : false,
-            allowIPAddressList: options && options.allowIPAddressList ? options.allowIPAddressList : [],
-            denyIPAddressList: options && options.denyIPAddressList ? options.denyIPAddressList : []
-        };
+// public
+// prevent twice apply
+const appliedAgentSet = new Set<http.Agent | https.Agent>();
+/**
+ * Apply request filter to http(s).Agent instance
+ */
+export const applyRequestFilter = (agent: http.Agent | http.Agent, options?: RequestFilteringAgentOptions) => {
+    if (appliedAgentSet.has(agent)) {
+        return agent;
     }
-
+    appliedAgentSet.add(agent);
+    const requestFilterOptions: Required<RequestFilteringAgentOptions> = {
+        allowPrivateIP: options && options.allowPrivateIP !== undefined ? options.allowPrivateIP : false,
+        allowIPAddressList: options && options.allowIPAddressList ? options.allowIPAddressList : [],
+        denyIPAddressList: options && options.denyIPAddressList ? options.denyIPAddressList : []
+    };
     // override http.Agent#createConnection
     // https://nodejs.org/api/http.html#http_agent_createconnection_options_callback
     // https://nodejs.org/api/net.html#net_net_createconnection_options_connectlistener
-    createConnection(options: TcpNetConnectOpts, connectionListener?: (error?: Error) => void): net.Socket {
-        const socket: net.Socket = super.createConnection(options, () => {
-            // Direct ip address request without dns-lookup
-            // Example: http://127.0.0.1
+    const createConnection = agent.createConnection;
+    agent.createConnection = (options, connectionListener) => {
+        const socket = createConnection.call(agent, options, () => {
             // https://nodejs.org/api/net.html#net_socket_connect_options_connectlistener
             const { host } = options;
             if (host) {
-                const error = validateAddress({ address: host }, this.requestFilterOptions);
+                // Direct ip address request without dns-lookup
+                // Example: http://127.0.0.1
+                // https://nodejs.org/api/net.html#net_socket_connect_options_connectlistener
+                const error = validateAddress({ address: host }, requestFilterOptions);
                 if (error) {
                     socket.destroy(error);
                 }
@@ -95,46 +101,29 @@ export class RequestFilteringHttpAgent extends http.Agent {
         });
         // Request with domain name
         // Example: http://127.0.0.1.xip.io/
-        addDropFilterSocket(this.requestFilterOptions, socket);
+        addDropFilterSocket(requestFilterOptions, socket);
         return socket;
+    };
+    return agent;
+};
+
+/**
+ * A subclsss of http.Agent with request filtering
+ */
+export class RequestFilteringHttpAgent extends http.Agent {
+    constructor(options?: http.AgentOptions & RequestFilteringAgentOptions) {
+        super(options);
+        applyRequestFilter(this, options);
     }
 }
 
+/**
+ * A subclsss of https.Agent with request filtering
+ */
 export class RequestFilteringHttpsAgent extends https.Agent {
-    private requestFilterOptions: Required<RequestFilteringAgentOptions>;
-
     constructor(options?: https.AgentOptions & RequestFilteringAgentOptions) {
         super(options);
-        this.requestFilterOptions = {
-            allowPrivateIP: options && options.allowPrivateIP !== undefined ? options.allowPrivateIP : false,
-            allowIPAddressList: options && options.allowIPAddressList ? options.allowIPAddressList : [],
-            denyIPAddressList: options && options.denyIPAddressList ? options.denyIPAddressList : []
-        };
-    }
-
-    // override https.Agent#createConnection
-    createConnection(options: TcpNetConnectOpts, connectionListener?: (error?: Error) => void): net.Socket {
-        const socket: net.Socket = super.createConnection(options, () => {
-            // https://nodejs.org/api/net.html#net_socket_connect_options_connectlistener
-            const { host } = options;
-            if (host) {
-                const error = validateAddress({ address: host }, this.requestFilterOptions);
-                if (error) {
-                    socket.destroy(error);
-                }
-            }
-            if (typeof connectionListener === "function") {
-                connectionListener();
-            }
-        });
-        const { host } = options;
-        if (host && connectionListener) {
-            const error = validateAddress({ address: host }, this.requestFilterOptions);
-            connectionListener(error);
-            return socket;
-        }
-        addDropFilterSocket(this.requestFilterOptions, socket);
-        return socket;
+        applyRequestFilter(this, options);
     }
 }
 
