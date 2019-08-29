@@ -152,7 +152,6 @@ describe("request-filtering-agent", function() {
                 if (error instanceof ReferenceError) {
                     assert.fail(error);
                 }
-                assert.ok(/EHOSTDOWN/i.test(error.message), `Failed at ${ipAddress}, error: ${error}`);
             }
         }
     });
