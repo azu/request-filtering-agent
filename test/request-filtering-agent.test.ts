@@ -1,33 +1,87 @@
 import * as assert from "assert";
 import fetch from "node-fetch";
-import { URL } from "url";
-import { RequestFilteringHttpAgent, RequestFilteringHttpsAgent } from "../src/request-filtering-agent";
+import { globalHttpAgent, RequestFilteringHttpAgent, useAgent } from "../src/request-filtering-agent";
+import * as http from "http";
 
+const TEST_PORT = 12456;
 describe("request-filtering-agent", function() {
-    it("should not request local ip address", async () => {
+    let close = () => {
+        return Promise.resolve();
+    };
+    beforeEach(() => {
+        return new Promise((resolve) => {
+            // response ok
+            const server = http.createServer();
+            server.on("request", (_req, res) => {
+                res.writeHead(200, { "Content-Type": "text/plain" });
+                res.write("ok");
+                res.end();
+            });
+            close = () => {
+                return new Promise((resolve, reject) => {
+                    server.close((error) => {
+                        if (error) {
+                            reject(error);
+                        } else {
+                            resolve();
+                        }
+                    });
+                });
+            };
+            server.listen(TEST_PORT, () => {
+                resolve();
+            });
+        });
+    });
+    afterEach(() => {
+        return close();
+    });
+    it("should request local ip address with allowPrivateIP: true", async () => {
+        const agent = new RequestFilteringHttpAgent({
+            allowPrivateIP: true
+        });
         const privateIPs = [
-            "http://127.0.0.1",
-            "http://017700000001",
-            "http://A.com@127.0.0.1",
-            "http://tino.local",
-            "http://127.0.0.1.xip.io/",
-            "https://127.0.0.1.xip.io/",
-            "http://localhost",
-            // aws
-            "http://169.254.169.254/latest/user-data",
-            // gcp
-            "http://169.254.169.254/computeMetadata/v1/"
+            `http://127.0.0.1:${TEST_PORT}`
         ];
         for (const ipAddress of privateIPs) {
-            const agent = (new URL(ipAddress)).protocol === "http:"
-                ? new RequestFilteringHttpAgent()
-                : new RequestFilteringHttpsAgent();
             try {
                 await fetch(ipAddress, {
                     agent,
-                    timeout: 1000
+                    timeout: 2000
                 });
-                throw new ReferenceError("should not be called");
+            } catch (error) {
+                assert.fail(new Error("should fetch, because it is allow"));
+            }
+        }
+    });
+    it("should allow http://127.0.0.1, but other private ip is disallowed", async () => {
+        const agent = new RequestFilteringHttpAgent({
+            allowIPAddressList: ["127.0.0.1"],
+            allowPrivateIP: false
+        });
+        const privateIPs = [
+            `http://127.0.0.1:${TEST_PORT}`
+        ];
+        for (const ipAddress of privateIPs) {
+            try {
+                await fetch(ipAddress, {
+                    agent,
+                    timeout: 2000
+                });
+            } catch (error) {
+                assert.fail(new Error("should fetch, because it is allow"));
+            }
+        }
+        const disAllowedPrivateIPs = [
+            `http://169.254.169.254:${TEST_PORT}`
+        ];
+        for (const ipAddress of disAllowedPrivateIPs) {
+            try {
+                await fetch(ipAddress, {
+                    agent,
+                    timeout: 2000
+                });
+                throw new ReferenceError("SHOULD NOT BE CALLED");
             } catch (error) {
                 if (error instanceof ReferenceError) {
                     assert.fail(error);
@@ -35,20 +89,81 @@ describe("request-filtering-agent", function() {
             }
         }
     });
-    it("should not request local ip address", async () => {
-        const agent = new RequestFilteringHttpAgent({
-            denyIPAddressList: ["example.com"]
-        });
+    it("should not request because Socket is closed", async () => {
+        const privateIPs = [
+            `http://127.0.0.1:${TEST_PORT}`, //
+            `http://A.com@127.0.0.1:${TEST_PORT}` //
+        ];
+        for (const ipAddress of privateIPs) {
+            try {
+                await fetch(ipAddress, {
+                    agent: useAgent(ipAddress),
+                    timeout: 2000
+                });
+                throw new ReferenceError("SHOULD NOT BE CALLED");
+            } catch (error) {
+                if (error instanceof ReferenceError) {
+                    assert.fail(error);
+                }
+                assert.ok(/Socket is closed/i.test(error.message), `Failed at ${ipAddress}, error: ${error}`);
+            }
+        }
+    });
+    it("should not request because the dns-lookuped address is private", async () => {
+        const privateIPs = [
+            `http://017700000001:${TEST_PORT}`, // long ip - lookup
+            `http://127.0.0.1.xip.io:${TEST_PORT}/`, // wildcard domain
+            // `https://127.0.0.1.nip.io:${TEST_PORT}/`,
+            `http://localhost:${TEST_PORT}`
+        ];
+        for (const ipAddress of privateIPs) {
+            try {
+                await fetch(ipAddress, {
+                    agent: useAgent(ipAddress),
+                    timeout: 2000
+                });
+                throw new ReferenceError("SHOULD NOT BE CALLED");
+            } catch (error) {
+                if (error instanceof ReferenceError) {
+                    assert.fail(error);
+                }
+                assert.ok(/It is private IP address/i.test(error.message), `Failed at ${ipAddress}, error: ${error}`);
+            }
+        }
+    });
+    // FIXME:
+    it("should not request because it is not resolve - timeout", async () => {
+        const privateIPs = [
+            // link address
+            `http://169.254.169.254:${TEST_PORT}`,
+            // aws
+            `http://169.254.169.254/latest/user-data`,
+            // gcp
+            `http://169.254.169.254/computeMetadata/v1/`
+        ];
+        for (const ipAddress of privateIPs) {
+            try {
+                await fetch(ipAddress, {
+                    agent: useAgent(ipAddress),
+                    timeout: 2000
+                });
+                throw new ReferenceError("SHOULD NOT BE CALLED");
+            } catch (error) {
+                if (error instanceof ReferenceError) {
+                    assert.fail(error);
+                }
+                assert.ok(/EHOSTDOWN/i.test(error.message), `Failed at ${ipAddress}, error: ${error}`);
+            }
+        }
+    });
+    it("should request public ip address", async () => {
         try {
             await fetch("http://example.com", {
-                agent
+                agent: globalHttpAgent,
+                timeout: 2000
             });
-            throw new ReferenceError("should not be called");
         } catch (error) {
-            if (error instanceof ReferenceError) {
-                assert.fail(error);
-            }
-            console.log(error);
+            assert.fail(new Error("should fetch public ip, but it is failed"));
         }
     });
 });
