@@ -59,12 +59,25 @@ It will prevent [DNS rebinding](https://en.wikipedia.org/wiki/DNS_rebinding)
 
 ## API
 
-
 ```ts
 export interface RequestFilteringAgentOptions {
-    allowPrivateIP?: boolean;
+    // Allow to connect private IP address
+    // Example, http://127.0.0.1/, http://localhost/
+    // Default: false
+    allowPrivateIPAddress?: boolean;
+    // Allow to connect meta address 0.0.0.0
+    // 0.0.0.0 (IPv4) and :: (IPv6) a meta address that routing another address
+    // https://en.wikipedia.org/wiki/Reserved_IP_addresses
+    // https://tools.ietf.org/html/rfc6890
+    // Default: false
+    allowMetaIPAddress?: boolean;
+    // Allow address list
+    // This values are preferred than denyAddressList
+    // Default: []
     allowIPAddressList?: string[];
-    denyIPAddressList?: string[];
+    // Deny address list
+    // Default: []
+    denyIPAddressList?: string[]
 }
 /**
  * Apply request filter to http(s).Agent instance
@@ -89,6 +102,7 @@ export declare const globalHttpsAgent: RequestFilteringHttpsAgent;
  * @param url
  */
 export declare const useAgent: (url: string) => RequestFilteringHttpAgent | RequestFilteringHttpsAgent;
+
 ```
 
 ### Example: Create an Agent with options
@@ -101,8 +115,8 @@ const { RequestFilteringHttpAgent } = require("request-filtering-agent");
 
 // Create http agent that allow 127.0.0.1, but it disallow other private ip
 const agent = new RequestFilteringHttpAgent({
-    allowIPAddressList: ["127.0.0.1"], // it is preferred than allowPrivateIP option
-    allowPrivateIP: false, // Default: false
+    allowIPAddressList: ["127.0.0.1"], // it is preferred than allowPrivateIPAddress option
+    allowPrivateIPAddress: false, // Default: false
 });
 // 127.0.0.1 is private ip address, but it is allowed
 const url = 'http://127.0.0.1:8080/';
@@ -128,7 +142,7 @@ const agent = new http.Agent({
 });
 // Apply request filtering to http.Agent
 const agentWithFiltering = applyRequestFilter(agent, {
-    allowPrivateIP: false // Default: false
+    allowPrivateIPAddress: false // Default: false
 });
 // 127.0.0.1 is private ip address
 const url = 'http://127.0.0.1:8080/';

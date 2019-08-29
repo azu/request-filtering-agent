@@ -12,10 +12,16 @@ declare module "http" {
 }
 
 export interface RequestFilteringAgentOptions {
-    // allow to connect private IP address
+    // Allow to connect private IP address
     // Example, http://127.0.0.1/, http://localhost/
-    //Default: false
-    allowPrivateIP?: boolean;
+    // Default: false
+    allowPrivateIPAddress?: boolean;
+    // Allow to connect meta address 0.0.0.0
+    // 0.0.0.0 (IPv4) and :: (IPv6) a meta address that routing another address
+    // https://en.wikipedia.org/wiki/Reserved_IP_addresses
+    // https://tools.ietf.org/html/rfc6890
+    // Default: false
+    allowMetaIPAddress?: boolean;
     // Allow address list
     // This values are preferred than denyAddressList
     // Default: []
@@ -39,7 +45,12 @@ const validateAddress = ({ address, host, family }: { address: string; host?: st
         return;
     }
 
-    if (!options.allowPrivateIP && ip.isPrivate(address)) {
+    if (!options.allowMetaIPAddress) {
+        if (address === "0.0.0.0" || address == "::") {
+            return new Error(`DNS lookup ${address}(family:${family}, host:${host}) is not allowed. Because, It is meta IP address.`);
+        }
+    }
+    if (!options.allowPrivateIPAddress && ip.isPrivate(address)) {
         return new Error(`DNS lookup ${address}(family:${family}, host:${host}) is not allowed. Because, It is private IP address.`);
     }
 
@@ -65,6 +76,7 @@ const addDropFilterSocket = (options: Required<RequestFilteringAgentOptions>, so
 // public
 // prevent twice apply
 const appliedAgentSet = new Set<http.Agent | https.Agent>();
+
 /**
  * Apply request filter to http(s).Agent instance
  */
@@ -74,7 +86,8 @@ export function applyRequestFilter<T extends http.Agent | http.Agent>(agent: T, 
     }
     appliedAgentSet.add(agent);
     const requestFilterOptions: Required<RequestFilteringAgentOptions> = {
-        allowPrivateIP: options && options.allowPrivateIP !== undefined ? options.allowPrivateIP : false,
+        allowPrivateIPAddress: options && options.allowPrivateIPAddress !== undefined ? options.allowPrivateIPAddress : false,
+        allowMetaIPAddress: options && options.allowMetaIPAddress !== undefined ? options.allowMetaIPAddress : false,
         allowIPAddressList: options && options.allowIPAddressList ? options.allowIPAddressList : [],
         denyIPAddressList: options && options.denyIPAddressList ? options.denyIPAddressList : []
     };
@@ -105,7 +118,7 @@ export function applyRequestFilter<T extends http.Agent | http.Agent>(agent: T, 
         return socket;
     };
     return agent;
-};
+}
 
 /**
  * A subclsss of http.Agent with request filtering
