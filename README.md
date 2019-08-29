@@ -1,6 +1,6 @@
 # request-filtering-agent [![Build Status](https://travis-ci.org/azu/request-filtering-agent.svg?branch=master)](https://travis-ci.org/azu/request-filtering-agent)
 
-A http(s).Agent implementation that filter request URLs by allow/deny list.
+A http(s).Agent implementation that block request Private IP address.
 
 It help to prevent [server-side request forgery (SSRF)](https://en.wikipedia.org/wiki/Server-side_request_forgery) attack.
 In other words, It prevent the request to private IP address/localhost.

@@ -1,7 +1,7 @@
 {
   "name": "request-filtering-agent",
   "version": "1.0.0",
-  "description": "A http(s).Agent implementation that filter request URLs by allow/deny list.",
+  "description": "A http(s).Agent implementation that block request Private IP address.",
   "homepage": "https://github.com/azu/request-filtering-agent",
   "bugs": {
     "url": "https://github.com/azu/request-filtering-agent/issues"
