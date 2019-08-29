@@ -124,7 +124,7 @@ fetch(url, {
     agent: agent
 }).then(res => {
     console.log(res); // OK
-})
+});
 ```
 
 ### Example: Apply request filtering to exising `http.Agent`
@@ -150,7 +150,7 @@ fetch(url, {
     agent: agentWithFiltering
 }).catch(error => {
     console.error(error); // Dis-allowed
-})
+});
 ```
 
 ## `http.Agent` libraries
