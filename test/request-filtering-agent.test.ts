@@ -163,7 +163,7 @@ describe("request-filtering-agent", function() {
             `http://017700000001:${TEST_PORT}`, // long ip - lookup
             `http://127.0.0.1.nip.io:${TEST_PORT}/`, // wildcard domain
             `https://127.0.0.1.nip.io:${TEST_PORT}/`, // wildcard domain
-            `http://localhost:${TEST_PORT}`
+            `http://localhost:${TEST_PORT}`,
         ];
         for (const ipAddress of privateIPs) {
             try {
@@ -184,7 +184,8 @@ describe("request-filtering-agent", function() {
     it("should not request because it is not resolve - timeout", async () => {
         const privateIPs = [
             // link address
-            `http://169.254.169.254:${TEST_PORT}`,
+            `http://169.254.169.254`,
+            `http://169.254.169.254.xip.io`,
             // aws
             `http://169.254.169.254/latest/user-data`,
             // gcp
