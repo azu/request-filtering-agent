@@ -67,15 +67,21 @@ export interface RequestFilteringAgentOptions {
     allowIPAddressList?: string[];
     denyIPAddressList?: string[];
 }
+/**
+ * Apply request filter to http(s).Agent instance
+ */
+export declare const applyRequestFilter: (agent: http.Agent, options?: RequestFilteringAgentOptions | undefined) => http.Agent;
+/**
+ * A subclsss of http.Agent with request filtering
+ */
 export declare class RequestFilteringHttpAgent extends http.Agent {
-    private requestFilterOptions;
     constructor(options?: http.AgentOptions & RequestFilteringAgentOptions);
-    createConnection(options: TcpNetConnectOpts, connectionListener?: () => void): net.Socket;
 }
+/**
+ * A subclsss of https.Agent with request filtering
+ */
 export declare class RequestFilteringHttpsAgent extends https.Agent {
-    private requestFilterOptions;
     constructor(options?: https.AgentOptions & RequestFilteringAgentOptions);
-    createConnection(options: TcpNetConnectOpts, connectionListener?: () => void): net.Socket;
 }
 export declare const globalHttpAgent: RequestFilteringHttpAgent;
 export declare const globalHttpsAgent: RequestFilteringHttpsAgent;
