@@ -112,7 +112,7 @@ fetch(url, {
 })
 ```
 
-### Example: Apply request filtering to exisint http.Agent
+### Example: Apply request filtering to exising `http.Agent`K
 
 You can apply request filtering to `http.Agent` or `https.Agent` using `applyRequestFilter` method.
 
