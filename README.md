@@ -21,7 +21,7 @@ Install with [npm](https://www.npmjs.com/):
 ```js
 const fetch = require("node-fetch");
 const { useAgent } = require("request-filtering-agent");
-const url = 'http://127.0.0.1.xip.io/';
+const url = 'http://127.0.0.1:8080/';
 fetch(url, {
     // use http or https agent for url
     agent: useAgent(url)
@@ -29,6 +29,34 @@ fetch(url, {
     console.err(err); // DNS lookup 127.0.0.1(family:4, host:127.0.0.1.xip.io) is not allowed. Because, It is private IP address.
 });
 ```
+
+`request-filtering-agent` support loopback domain like [xip.io](http://xip.io) and [nip.io](https://nip.io/).
+This library detect the IP adpress that is dns lookup-ed.
+
+
+```
+$ dig 127.0.0.1.xip.io
+
+;127.0.0.1.xip.io.		IN	A
+
+;; ANSWER SECTION:
+127.0.0.1.xip.io.	300	IN	A	127.0.0.1
+```
+
+Example code:
+
+```js
+const fetch = require("node-fetch");
+const { useAgent } = require("request-filtering-agent");
+const url = 'http://127.0.0.1.xip.io:8080/';
+fetch(url, {
+    agent: useAgent(url)
+}).catch(err => {
+    console.err(err); // DNS lookup 127.0.0.1(family:4, host:127.0.0.1.xip.io) is not allowed. Because, It is private IP address.
+});
+```
+
+It will prevent [DNS rebinding](https://en.wikipedia.org/wiki/DNS_rebinding)
 
 ## API
 
@@ -77,6 +105,41 @@ fetch(url, {
     console.log(res); // OK
 })
 ```
+
+### Example: Custom http.Agent Options
+
+`RequestFilteringHttpAgent` and `RequestFilteringHttpsAgent` accept Node.js's [http.Agent](https://nodejs.org/api/http.html#http_class_http_agent) options. 
+Because, These is subclass of `http.Agent` and `https.Agent`.
+
+```js
+const fetch = require("node-fetch");
+const { RequestFilteringHttpAgent } = require("request-filtering-agent");
+
+// Create http agent that allow 127.0.0.1, but it disallow other private ip
+const agent = new RequestFilteringHttpAgent({
+    // http.Agent'S keepAlive options
+    keepAlive: true,
+    allowPrivateIP: true, // Default: false
+});
+// 127.0.0.1 is private ip address, but it is allowed
+const url = 'http://127.0.0.1:8080/';
+fetch(url, {
+    agent: agent
+}).then(res => {
+    console.log(res); // OK
+})
+```
+
+## `http.Agent` libraries
+
+[http.Agent](https://nodejs.org/api/http.html#http_class_http_agent) is supported by popular library.
+
+- [node-fetch](https://github.com/bitinn/node-fetch)
+- [Request](https://github.com/request/request)
+- [node-http-proxy](https://github.com/http-party/node-http-proxy)
+- [axios](https://github.com/axios/axios)
+
+`request-filtering-agent` work with these libraries.
 
 ## Related
 
