@@ -169,7 +169,7 @@ fetch(url, {
 - [welefen/ssrf-agent: make http(s) request to prevent SSRF](https://github.com/welefen/ssrf-agent)
     - It provide only high level wrapper
     - It only handle Private IP address that is definition in [node-ip](https://github.com/indutny/node-ip/blob/43e442366bf5a93493c8c4c36736f87d675b0c3d/lib/ip.js#L302-L314)
-        - Missing Meta IP Address like `0.0.0.0
+        - Missing Meta IP Address like `0.0.0.0`
 
 ## Changelog
 
