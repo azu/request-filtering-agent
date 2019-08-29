@@ -161,8 +161,8 @@ describe("request-filtering-agent", function() {
     it("should not request because the dns-lookuped address is private", async () => {
         const privateIPs = [
             `http://017700000001:${TEST_PORT}`, // long ip - lookup
-            `http://127.0.0.1.xip.io:${TEST_PORT}/`, // wildcard domain
-            // `https://127.0.0.1.nip.io:${TEST_PORT}/`,
+            `http://127.0.0.1.nip.io:${TEST_PORT}/`, // wildcard domain
+            `https://127.0.0.1.nip.io:${TEST_PORT}/`, // wildcard domain
             `http://localhost:${TEST_PORT}`
         ];
         for (const ipAddress of privateIPs) {
