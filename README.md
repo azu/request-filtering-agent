@@ -1,6 +1,6 @@
 # request-filtering-agent [![Build Status](https://travis-ci.org/azu/request-filtering-agent.svg?branch=master)](https://travis-ci.org/azu/request-filtering-agent)
 
-An http(s).Agent implementation that block request Private IP address.
+An [http(s).Agent](https://nodejs.org/api/http.html#http_class_http_agent) class that block request Private IP address.
 
 It help to prevent [server-side request forgery (SSRF)](https://en.wikipedia.org/wiki/Server-side_request_forgery) attack.
 
