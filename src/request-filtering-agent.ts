@@ -68,7 +68,7 @@ const appliedAgentSet = new Set<http.Agent | https.Agent>();
 /**
  * Apply request filter to http(s).Agent instance
  */
-export const applyRequestFilter = (agent: http.Agent | http.Agent, options?: RequestFilteringAgentOptions) => {
+export function applyRequestFilter<T extends http.Agent | http.Agent>(agent: T, options?: RequestFilteringAgentOptions): T {
     if (appliedAgentSet.has(agent)) {
         return agent;
     }

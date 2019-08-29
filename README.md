@@ -70,7 +70,7 @@ export interface RequestFilteringAgentOptions {
 /**
  * Apply request filter to http(s).Agent instance
  */
-export declare const applyRequestFilter: (agent: http.Agent, options?: RequestFilteringAgentOptions | undefined) => http.Agent;
+export declare function applyRequestFilter<T extends http.Agent | http.Agent>(agent: T, options?: RequestFilteringAgentOptions): T;
 /**
  * A subclsss of http.Agent with request filtering
  */
