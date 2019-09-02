@@ -181,7 +181,7 @@ describe("request-filtering-agent", function() {
             try {
                 await fetch(ipAddress, {
                     agent: useAgent(ipAddress),
-                    timeout: 5000
+                    timeout: 10000
                 });
                 throw new ReferenceError("SHOULD NOT BE CALLED");
             } catch (error) {
