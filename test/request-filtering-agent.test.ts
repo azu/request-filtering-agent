@@ -175,12 +175,13 @@ describe("request-filtering-agent", function() {
             `http://127.0.0.1.nip.io:${TEST_PORT}/`, // wildcard domain
             `https://127.0.0.1.nip.io:${TEST_PORT}/`, // wildcard domain
             `http://localhost:${TEST_PORT}`,
+            `http://bit.ly/2jU2tjF`, // redirect to http://127.0.1:12456
         ];
         for (const ipAddress of privateIPs) {
             try {
                 await fetch(ipAddress, {
                     agent: useAgent(ipAddress),
-                    timeout: 2000
+                    timeout: 5000
                 });
                 throw new ReferenceError("SHOULD NOT BE CALLED");
             } catch (error) {
