@@ -9,6 +9,7 @@ import {
 import * as http from "http";
 
 const TEST_PORT = 12456;
+const IS_TRAVIS = !!process.env.TRAVIS;
 describe("request-filtering-agent", function() {
     let close = () => {
         return Promise.resolve();
@@ -61,8 +62,7 @@ describe("request-filtering-agent", function() {
     });
     it("apply request filtering to existing http.Agent", async () => {
         const agent = new http.Agent({
-            keepAlive: true,
-            maxSockets: 1
+            keepAlive: true
         });
         const agentWithFiltering = applyRequestFilter(agent, {
             allowPrivateIPAddress: true
@@ -138,7 +138,7 @@ describe("request-filtering-agent", function() {
             }
         }
     });
-    it("should not request because Socket is closed", async () => {
+    it("IPv4: should not request because Socket is closed", async () => {
         const privateIPs = [
             `http://0.0.0.0:${TEST_PORT}`, // 0.0.0.0 is special
             `http://127.0.0.1:${TEST_PORT}`, //
@@ -149,14 +149,36 @@ describe("request-filtering-agent", function() {
             `http://[::ffff:127.0.0.1]:${TEST_PORT}`, // IPv4-mapped IPv6 addresses
             `http://[::ffff:7f00:1]:${TEST_PORT}` // IPv4-mapped IPv6 addresses
         ];
-        // https://stackoverflow.com/questions/20991551/eaddrnotavail-after-many-http-get-requests-to-localhost/52038614#52038614
-        const httpAgent = new http.Agent({
-            maxSockets: 1
-        });
         for (const ipAddress of privateIPs) {
             try {
                 await fetch(ipAddress, {
-                    agent: applyRequestFilter(httpAgent),
+                    agent: useAgent(ipAddress),
+                    timeout: 2000
+                });
+                throw new ReferenceError("SHOULD NOT BE CALLED");
+            } catch (error) {
+                if (error instanceof ReferenceError) {
+                    assert.fail(error);
+                }
+                assert.ok(/Socket is closed/i.test(error.message), `Failed at ${ipAddress}, error: ${error}`);
+            }
+        }
+    });
+    // TODO: Travis CI does not support IPv6
+    // https://docs.travis-ci.com/user/reference/overview/
+    // https://github.com/travis-ci/travis-ci/issues/8891
+    (IS_TRAVIS ? it.skip : it)("IPv6: should not request because Socket is closed", async () => {
+        const privateIPs = [
+            `http://[::1]:${TEST_PORT}`, // IPv6
+            `http://[0:0:0:0:0:0:0:1]:${TEST_PORT}`, // IPv6 explicitly
+            `http://[0:0:0:0:0:ffff:127.0.0.1]:${TEST_PORT}`, // IPv4-mapped IPv6 addresses
+            `http://[::ffff:127.0.0.1]:${TEST_PORT}`, // IPv4-mapped IPv6 addresses
+            `http://[::ffff:7f00:1]:${TEST_PORT}` // IPv4-mapped IPv6 addresses
+        ];
+        for (const ipAddress of privateIPs) {
+            try {
+                await fetch(ipAddress, {
+                    agent: useAgent(ipAddress),
                     timeout: 2000
                 });
                 throw new ReferenceError("SHOULD NOT BE CALLED");
