@@ -2,7 +2,7 @@ import * as net from "net";
 import { Socket, TcpNetConnectOpts } from "net";
 import * as http from "http";
 import * as https from "https";
-import ip from "ip";
+import ipaddr from "ipaddr.js";
 
 // Definition missing interface
 declare module "http" {
@@ -39,23 +39,34 @@ export interface RequestFilteringAgentOptions {
  * @param family optional
  * @param options
  */
-const validateAddress = ({ address, host, family }: { address: string; host?: string; family?: string | number }, options: Required<RequestFilteringAgentOptions>) => {
-    // prefer allowed list
-    if (options.allowIPAddressList.length > 0 && options.allowIPAddressList.includes(address)) {
+const validateIPAddress = ({ address, host, family }: { address: string; host?: string; family?: string | number }, options: Required<RequestFilteringAgentOptions>) => {
+    // if it is not IP address, skip it
+    if (net.isIP(address) === 0) {
         return;
     }
-
-    if (!options.allowMetaIPAddress) {
-        if (address === "0.0.0.0" || address == "::") {
-            return new Error(`DNS lookup ${address}(family:${family}, host:${host}) is not allowed. Because, It is meta IP address.`);
+    try {
+        const addr = ipaddr.parse(address);
+        const range = addr.range();
+        // prefer allowed list
+        if (options.allowIPAddressList.length > 0 && options.allowIPAddressList.includes(address)) {
+            return;
         }
-    }
-    if (!options.allowPrivateIPAddress && ip.isPrivate(address)) {
-        return new Error(`DNS lookup ${address}(family:${family}, host:${host}) is not allowed. Because, It is private IP address.`);
-    }
+        if (!options.allowMetaIPAddress) {
+            // address === "0.0.0.0" || address == "::"
+            if (range === "unspecified") {
+                return new Error(`DNS lookup ${address}(family:${family}, host:${host}) is not allowed. Because, It is meta IP address.`);
+            }
+        }
+        // TODO: rename option name
+        if (!options.allowPrivateIPAddress && range !== "unicast") {
+            return new Error(`DNS lookup ${address}(family:${family}, host:${host}) is not allowed. Because, It is private IP address.`);
+        }
 
-    if (options.denyIPAddressList.length > 0 && options.denyIPAddressList.includes(address)) {
-        return new Error(`DNS lookup ${address}(family:${family}, host:${host}) is not allowed. Because It is defined in denyIPAddressList.`);
+        if (options.denyIPAddressList.length > 0 && options.denyIPAddressList.includes(address)) {
+            return new Error(`DNS lookup ${address}(family:${family}, host:${host}) is not allowed. Because It is defined in denyIPAddressList.`);
+        }
+    } catch (error) {
+        return error; // if can not parsed IP address, throw error
     }
     return;
 };
@@ -66,7 +77,7 @@ const addDropFilterSocket = (options: Required<RequestFilteringAgentOptions>, so
         if (err) {
             return;
         }
-        const error = validateAddress({ address, family, host }, options);
+        const error = validateIPAddress({ address, family, host }, options);
         if (error) {
             socket.destroy(error);
         }
@@ -103,7 +114,7 @@ export function applyRequestFilter<T extends http.Agent | http.Agent>(agent: T, 
                 // Direct ip address request without dns-lookup
                 // Example: http://127.0.0.1
                 // https://nodejs.org/api/net.html#net_socket_connect_options_connectlistener
-                const error = validateAddress({ address: host }, requestFilterOptions);
+                const error = validateIPAddress({ address: host }, requestFilterOptions);
                 if (error) {
                     socket.destroy(error);
                 }

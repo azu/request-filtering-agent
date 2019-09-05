@@ -72,6 +72,6 @@
     "typescript": "^3.5.3"
   },
   "dependencies": {
-    "ip": "^1.1.5"
+    "ipaddr.js": "^1.9.1"
   }
 }
