@@ -61,7 +61,8 @@ describe("request-filtering-agent", function() {
     });
     it("apply request filtering to existing http.Agent", async () => {
         const agent = new http.Agent({
-            keepAlive: true
+            keepAlive: true,
+            maxSockets: 1
         });
         const agentWithFiltering = applyRequestFilter(agent, {
             allowPrivateIPAddress: true
@@ -142,16 +143,20 @@ describe("request-filtering-agent", function() {
             `http://0.0.0.0:${TEST_PORT}`, // 0.0.0.0 is special
             `http://127.0.0.1:${TEST_PORT}`, //
             `http://A.com@127.0.0.1:${TEST_PORT}`, //
-             // `http://[::1]:${TEST_PORT}`, // IPv6
+            `http://[::1]:${TEST_PORT}`, // IPv6
             `http://[0:0:0:0:0:0:0:1]:${TEST_PORT}`, // IPv6 explicitly
             `http://[0:0:0:0:0:ffff:127.0.0.1]:${TEST_PORT}`, // IPv4-mapped IPv6 addresses
             `http://[::ffff:127.0.0.1]:${TEST_PORT}`, // IPv4-mapped IPv6 addresses
-            `http://[::ffff:7f00:1]:${TEST_PORT}`, // IPv4-mapped IPv6 addresses
+            `http://[::ffff:7f00:1]:${TEST_PORT}` // IPv4-mapped IPv6 addresses
         ];
+        // https://stackoverflow.com/questions/20991551/eaddrnotavail-after-many-http-get-requests-to-localhost/52038614#52038614
+        const httpAgent = new http.Agent({
+            maxSockets: 1
+        });
         for (const ipAddress of privateIPs) {
             try {
                 await fetch(ipAddress, {
-                    agent: useAgent(ipAddress),
+                    agent: applyRequestFilter(httpAgent),
                     timeout: 2000
                 });
                 throw new ReferenceError("SHOULD NOT BE CALLED");
@@ -180,7 +185,7 @@ describe("request-filtering-agent", function() {
             `http://127.0.0.1.nip.io:${TEST_PORT}/`, // wildcard domain
             `https://127.0.0.1.nip.io:${TEST_PORT}/`, // wildcard domain
             `http://localhost:${TEST_PORT}`,
-            `http://bit.ly/2jU2tjF`, // redirect to http://127.0.1:12456
+            `http://bit.ly/2jU2tjF` // redirect to http://127.0.1:12456
         ];
         for (const ipAddress of privateIPs) {
             try {
