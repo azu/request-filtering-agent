@@ -1,4 +1,4 @@
-# request-filtering-agent [![Build Status](https://travis-ci.org/azu/request-filtering-agent.svg?branch=master)](https://travis-ci.org/azu/request-filtering-agent)
+# request-filtering-agent [![Actions Status](https://github.com/azu/request-filtering-agent/workflows/ci/badge.svg)](https://github.com/azu/request-filtering-agent/actions)
 
 An [http(s).Agent](https://nodejs.org/api/http.html#http_class_http_agent) class that block request Private IP address.
 
