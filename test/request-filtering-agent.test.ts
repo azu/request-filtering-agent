@@ -9,7 +9,7 @@ import {
 import * as http from "http";
 
 const TEST_PORT = 12456;
-const IS_TRAVIS = !!process.env.TRAVIS;
+const IS_IPV6_SUPPORTED = true;
 describe("request-filtering-agent", function() {
     let close = () => {
         return Promise.resolve();
@@ -162,7 +162,7 @@ describe("request-filtering-agent", function() {
     // TODO: Travis CI does not support IPv6
     // https://docs.travis-ci.com/user/reference/overview/
     // https://github.com/travis-ci/travis-ci/issues/8891
-    (IS_TRAVIS ? it.skip : it)("IPv6: should not request because Socket is closed", async () => {
+    (IS_IPV6_SUPPORTED ? it : it.skip)("IPv6: should not request because Socket is closed", async () => {
         const privateIPs = [
             `http://[::1]:${TEST_PORT}`, // IPv6
             `http://[0:0:0:0:0:0:0:1]:${TEST_PORT}`, // IPv6 explicitly
