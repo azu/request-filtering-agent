@@ -11,7 +11,7 @@ This library block the request to these IP addresses by default.
 
 - [Private IPv4 addresses](https://en.wikipedia.org/wiki/Private_network#Private_IPv4_addresses)
 - [Private IPv6 addresses](https://en.wikipedia.org/wiki/Private_network#Private_IPv6_addresses)
-- [Link-local addresses](https://en.wikipedia.org/wiki/Private_network#Link-local_addresses) (`169.254.1.0` - `169.254.254.255`)
+- [Link-local addresses](https://en.wikipedia.org/wiki/Private_network#Link-local_addresses)
 - [Reserved IP addresses](https://en.wikipedia.org/wiki/Reserved_IP_addresses)
 
 So, This library block the request to non-`unicast` IP addresses.
