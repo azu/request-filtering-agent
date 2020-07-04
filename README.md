@@ -183,6 +183,11 @@ Install devDependencies and Run `npm test`:
 
     npm test
 
+:memo: This testing require IPv6 supports:
+
+- Travis CI: NG 
+- GitHub Actions: OK
+
 ## Contributing
 
 Pull requests and stars are always welcome.
