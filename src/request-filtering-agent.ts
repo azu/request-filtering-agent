@@ -6,7 +6,10 @@ import ipaddr from "ipaddr.js";
 
 export interface RequestFilteringAgentOptions {
     // Allow to connect private IP address
-    // Example, http://127.0.0.1/, http://localhost/
+    // This includes Private IP addresses and Reserved IP addresses.
+    // https://en.wikipedia.org/wiki/Private_network
+    // https://en.wikipedia.org/wiki/Reserved_IP_addresses
+    // Example, http://127.0.0.1/, http://localhost/, https://169.254.169.254/
     // Default: false
     allowPrivateIPAddress?: boolean;
     // Allow to connect meta address 0.0.0.0

@@ -1,6 +1,6 @@
 # request-filtering-agent [![Actions Status](https://github.com/azu/request-filtering-agent/workflows/ci/badge.svg)](https://github.com/azu/request-filtering-agent/actions)
 
-An [http(s).Agent](https://nodejs.org/api/http.html#http_class_http_agent) class block the request to [Private IP addresses](https://en.wikipedia.org/wiki/Private_network#Link-local_addresses) and [Reserved IP addresses](https://en.wikipedia.org/wiki/Reserved_IP_addresses).
+An [http(s).Agent](https://nodejs.org/api/http.html#http_class_http_agent) class block the request to [Private IP addresses](https://en.wikipedia.org/wiki/Private_network) and [Reserved IP addresses](https://en.wikipedia.org/wiki/Reserved_IP_addresses).
 
 It helps to prevent [server-side request forgery (SSRF)](https://en.wikipedia.org/wiki/Server-side_request_forgery) attack.
 
@@ -85,7 +85,10 @@ It will prevent [DNS rebinding](https://en.wikipedia.org/wiki/DNS_rebinding)
 ```ts
 export interface RequestFilteringAgentOptions {
     // Allow to connect private IP address
-    // Example, http://127.0.0.1/, http://localhost/
+    // This includes Private IP addresses and Reserved IP addresses.
+    // https://en.wikipedia.org/wiki/Private_network
+    // https://en.wikipedia.org/wiki/Reserved_IP_addresses
+    // Example, http://127.0.0.1/, http://localhost/, https://169.254.169.254/
     // Default: false
     allowPrivateIPAddress?: boolean;
     // Allow to connect meta address 0.0.0.0
@@ -105,15 +108,15 @@ export interface RequestFilteringAgentOptions {
 /**
  * Apply request filter to http(s).Agent instance
  */
-export declare function applyRequestFilter<T extends http.Agent | http.Agent>(agent: T, options?: RequestFilteringAgentOptions): T;
+export declare function applyRequestFilter<T extends http.Agent | https.Agent>(agent: T, options?: RequestFilteringAgentOptions): T;
 /**
- * A subclsss of http.Agent with request filtering
+ * A subclass of http.Agent with request filtering
  */
 export declare class RequestFilteringHttpAgent extends http.Agent {
     constructor(options?: http.AgentOptions & RequestFilteringAgentOptions);
 }
 /**
- * A subclsss of https.Agent with request filtering
+ * A subclass of https.Agent with request filtering
  */
 export declare class RequestFilteringHttpsAgent extends https.Agent {
     constructor(options?: https.AgentOptions & RequestFilteringAgentOptions);
@@ -121,11 +124,11 @@ export declare class RequestFilteringHttpsAgent extends https.Agent {
 export declare const globalHttpAgent: RequestFilteringHttpAgent;
 export declare const globalHttpsAgent: RequestFilteringHttpsAgent;
 /**
- * get right an agent for the url
+ * Get an agent for the url
+ * return http or https agent
  * @param url
  */
 export declare const useAgent: (url: string) => RequestFilteringHttpAgent | RequestFilteringHttpsAgent;
-
 ```
 
 ### Example: Create an Agent with options
