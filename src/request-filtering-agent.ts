@@ -127,7 +127,7 @@ export function applyRequestFilter<T extends http.Agent | https.Agent>(agent: T,
 }
 
 /**
- * A subclsss of http.Agent with request filtering
+ * A subclass of http.Agent with request filtering
  */
 export class RequestFilteringHttpAgent extends http.Agent {
     constructor(options?: http.AgentOptions & RequestFilteringAgentOptions) {
@@ -137,7 +137,7 @@ export class RequestFilteringHttpAgent extends http.Agent {
 }
 
 /**
- * A subclsss of https.Agent with request filtering
+ * A subclass of https.Agent with request filtering
  */
 export class RequestFilteringHttpsAgent extends https.Agent {
     constructor(options?: https.AgentOptions & RequestFilteringAgentOptions) {
