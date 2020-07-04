@@ -1,15 +1,8 @@
 import * as net from "net";
-import { Socket, TcpNetConnectOpts } from "net";
+import { TcpNetConnectOpts } from "net";
 import * as http from "http";
 import * as https from "https";
 import ipaddr from "ipaddr.js";
-
-// Definition missing interface
-declare module "http" {
-    interface Agent {
-        createConnection(options: TcpNetConnectOpts, connectionListener?: (error?: Error) => void): Socket;
-    }
-}
 
 export interface RequestFilteringAgentOptions {
     // Allow to connect private IP address
@@ -105,8 +98,10 @@ export function applyRequestFilter<T extends http.Agent | https.Agent>(agent: T,
     // override http.Agent#createConnection
     // https://nodejs.org/api/http.html#http_agent_createconnection_options_callback
     // https://nodejs.org/api/net.html#net_net_createconnection_options_connectlistener
+    // @ts-expect-error - @types/node does not defined createConnection
     const createConnection = agent.createConnection;
-    agent.createConnection = (options, connectionListener) => {
+    // @ts-expect-error - @types/node does not defined createConnection
+    agent.createConnection = (options: TcpNetConnectOpts, connectionListener?: (error?: Error) => void) => {
         const socket = createConnection.call(agent, options, () => {
             // https://nodejs.org/api/net.html#net_socket_connect_options_connectlistener
             const { host } = options;
