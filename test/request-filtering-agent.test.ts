@@ -155,7 +155,7 @@ describe("request-filtering-agent", function() {
                 if (error instanceof ReferenceError) {
                     assert.fail(error);
                 }
-                assert.ok(/Socket is closed/i.test(error.message), `Failed at ${ipAddress}, error: ${error}`);
+                assert.strictEqual(error.type, "system", `Failed at ${ipAddress}, error: ${error}`);
             }
         }
     });
@@ -181,7 +181,8 @@ describe("request-filtering-agent", function() {
                 if (error instanceof ReferenceError) {
                     assert.fail(error);
                 }
-                assert.ok(/Socket is closed/i.test(error.message), `Failed at ${ipAddress}, error: ${error}`);
+                // Should be system error
+                assert.strictEqual(error.type, "system", `Failed at ${ipAddress}, error: ${error}`);
             }
         }
     });
