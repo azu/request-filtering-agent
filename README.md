@@ -1,10 +1,20 @@
 # request-filtering-agent [![Actions Status](https://github.com/azu/request-filtering-agent/workflows/ci/badge.svg)](https://github.com/azu/request-filtering-agent/actions)
 
-An [http(s).Agent](https://nodejs.org/api/http.html#http_class_http_agent) class that block request Private IP address.
+An [http(s).Agent](https://nodejs.org/api/http.html#http_class_http_agent) class block request [Private IP addresses](https://en.wikipedia.org/wiki/Private_network#Link-local_addresses) and [Reserved IP addresses](https://en.wikipedia.org/wiki/Reserved_IP_addresses).
 
 It helps to prevent [server-side request forgery (SSRF)](https://en.wikipedia.org/wiki/Server-side_request_forgery) attack.
 
 - [What is SSRF (Server-side request forgery)? Tutorial & Examples](https://portswigger.net/web-security/ssrf)
+
+This library depended on [ipaddr.js](https://github.com/whitequark/ipaddr.js) definitions.
+This library block the request to these IP addresses by default.
+
+- [Private IPv4 addresses](https://en.wikipedia.org/wiki/Private_network#Private_IPv4_addresses)
+- [Private IPv6 addresses](https://en.wikipedia.org/wiki/Private_network#Private_IPv6_addresses)
+- [Link-local addresses](https://en.wikipedia.org/wiki/Private_network#Link-local_addresses) (`169.254.1.0` - `169.254.254.255`)
+- [Reserved IP addresses](https://en.wikipedia.org/wiki/Reserved_IP_addresses)
+
+So, This library block the request to non-`unicast` IP addresses.
 
 ## Install
 
