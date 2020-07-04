@@ -194,6 +194,8 @@ Pull requests and stars are always welcome.
 
 For bugs and feature requests, [please create an issue](https://github.com/azu/request-filtering-agent/issues).
 
+For security issue, please see [SECURITY.md](./SECURITY.md)
+
 1. Fork it!
 2. Create your feature branch: `git checkout -b my-new-feature`
 3. Commit your changes: `git commit -am 'Add some feature'`
