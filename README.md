@@ -26,6 +26,7 @@ This library provides Node.js's [http.Agent](https://nodejs.org/api/http.html#ht
 - [Request](https://github.com/request/request)
 - [node-http-proxy](https://github.com/http-party/node-http-proxy)
 - [axios](https://github.com/axios/axios)
+- [got](https://github.com/sindresorhus/got)
 
 `request-filtering-agent` works with these libraries!
 
