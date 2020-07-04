@@ -149,7 +149,8 @@ export class RequestFilteringHttpsAgent extends https.Agent {
 export const globalHttpAgent = new RequestFilteringHttpAgent();
 export const globalHttpsAgent = new RequestFilteringHttpsAgent();
 /**
- * get right an agent for the url
+ * Get an agent for the url
+ * return http or https agent
  * @param url
  */
 export const useAgent = (url: string) => {
