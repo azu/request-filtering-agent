@@ -179,9 +179,9 @@ See [Releases page](https://github.com/azu/request-filtering-agent/releases).
 
 ## Running tests
 
-Install devDependencies and Run `npm test`:
+Install devDependencies and Run `yarn test`:
 
-    npm test
+    yarn test
 
 :memo: This testing require IPv6 supports:
 
