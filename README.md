@@ -22,6 +22,19 @@ Install with [npm](https://www.npmjs.com/):
 
     npm install request-filtering-agent
 
+## `http.Agent` libraries
+
+This library provides Node.js's [http.Agent](https://nodejs.org/api/http.html#http_class_http_agent) implementation.
+[http.Agent](https://nodejs.org/api/http.html#http_class_http_agent) is supported by popular library.
+
+- Node.js's built-in `http` and `https`
+- [node-fetch](https://github.com/bitinn/node-fetch)
+- [Request](https://github.com/request/request)
+- [node-http-proxy](https://github.com/http-party/node-http-proxy)
+- [axios](https://github.com/axios/axios)
+
+`request-filtering-agent` works with these libraries!
+
 ## Usage
 
 `useAgent(url)` return an agent for the url.
@@ -40,8 +53,7 @@ fetch(url, {
 ```
 
 `request-filtering-agent` support loopback domain like [xip.io](http://xip.io) and [nip.io](https://nip.io/).
-This library detect the IP address that is dns lookup-ed.
-
+This library detects the IP address that is dns lookup-ed.
 
 ```
 $ dig 127.0.0.1.xip.io
@@ -164,17 +176,6 @@ fetch(url, {
     console.error(error); // Dis-allowed
 });
 ```
-
-## `http.Agent` libraries
-
-[http.Agent](https://nodejs.org/api/http.html#http_class_http_agent) is supported by popular library.
-
-- [node-fetch](https://github.com/bitinn/node-fetch)
-- [Request](https://github.com/request/request)
-- [node-http-proxy](https://github.com/http-party/node-http-proxy)
-- [axios](https://github.com/axios/axios)
-
-`request-filtering-agent` work with these libraries.
 
 ## Related
 
