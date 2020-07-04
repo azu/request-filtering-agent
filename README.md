@@ -1,6 +1,6 @@
 # request-filtering-agent [![Actions Status](https://github.com/azu/request-filtering-agent/workflows/ci/badge.svg)](https://github.com/azu/request-filtering-agent/actions)
 
-An [http(s).Agent](https://nodejs.org/api/http.html#http_class_http_agent) class block request [Private IP addresses](https://en.wikipedia.org/wiki/Private_network#Link-local_addresses) and [Reserved IP addresses](https://en.wikipedia.org/wiki/Reserved_IP_addresses).
+An [http(s).Agent](https://nodejs.org/api/http.html#http_class_http_agent) class block the request to [Private IP addresses](https://en.wikipedia.org/wiki/Private_network#Link-local_addresses) and [Reserved IP addresses](https://en.wikipedia.org/wiki/Reserved_IP_addresses).
 
 It helps to prevent [server-side request forgery (SSRF)](https://en.wikipedia.org/wiki/Server-side_request_forgery) attack.
 
