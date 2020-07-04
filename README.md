@@ -16,13 +16,7 @@ This library block the request to these IP addresses by default.
 
 So, This library block the request to non-`unicast` IP addresses.
 
-## Install
-
-Install with [npm](https://www.npmjs.com/):
-
-    npm install request-filtering-agent
-
-## `http.Agent` libraries
+## Support `http.Agent` libraries
 
 This library provides Node.js's [http.Agent](https://nodejs.org/api/http.html#http_class_http_agent) implementation.
 [http.Agent](https://nodejs.org/api/http.html#http_class_http_agent) is supported by popular library.
@@ -34,6 +28,12 @@ This library provides Node.js's [http.Agent](https://nodejs.org/api/http.html#ht
 - [axios](https://github.com/axios/axios)
 
 `request-filtering-agent` works with these libraries!
+
+## Install
+
+Install with [npm](https://www.npmjs.com/):
+
+    npm install request-filtering-agent
 
 ## Usage
 
