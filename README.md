@@ -38,7 +38,8 @@ This library provides Node.js's [http.Agent](https://nodejs.org/api/http.html#ht
 ## Usage
 
 `useAgent(url)` return an agent for the url.
-`request-filtering-agent` disallow to request to [Private network](https://en.wikipedia.org/wiki/Private_network).
+
+The agent blocks the request to [Private network](https://en.wikipedia.org/wiki/Private_network) and [Reserved IP addresses](https://en.wikipedia.org/wiki/Reserved_IP_addresses) by default.
 
 ```js
 const fetch = require("node-fetch");
