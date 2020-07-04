@@ -2,7 +2,7 @@
 
 An [http(s).Agent](https://nodejs.org/api/http.html#http_class_http_agent) class that block request Private IP address.
 
-It help to prevent [server-side request forgery (SSRF)](https://en.wikipedia.org/wiki/Server-side_request_forgery) attack.
+It helps to prevent [server-side request forgery (SSRF)](https://en.wikipedia.org/wiki/Server-side_request_forgery) attack.
 
 - [What is SSRF (Server-side request forgery)? Tutorial & Examples](https://portswigger.net/web-security/ssrf)
 
@@ -30,7 +30,7 @@ fetch(url, {
 ```
 
 `request-filtering-agent` support loopback domain like [xip.io](http://xip.io) and [nip.io](https://nip.io/).
-This library detect the IP adpress that is dns lookup-ed.
+This library detect the IP address that is dns lookup-ed.
 
 
 ```
@@ -107,7 +107,7 @@ export declare const useAgent: (url: string) => RequestFilteringHttpAgent | Requ
 
 ### Example: Create an Agent with options
 
-An agent that allow to request `127.0.0.1`, but it dissllow other Private IP.
+An agent that allow requesting `127.0.0.1`, but it disallows other Private IP.
 
 ```js
 const fetch = require("node-fetch");
@@ -127,7 +127,7 @@ fetch(url, {
 });
 ```
 
-### Example: Apply request filtering to exising `http.Agent`
+### Example: Apply request filtering to excising `http.Agent`
 
 You can apply request filtering to `http.Agent` or `https.Agent` using `applyRequestFilter` method.
 
@@ -144,8 +144,10 @@ const agent = new http.Agent({
 const agentWithFiltering = applyRequestFilter(agent, {
     allowPrivateIPAddress: false // Default: false
 });
-// 127.0.0.1 is private ip address
-const url = 'http://127.0.0.1:8080/';
+// 169.254.169.254 is private ip address aka. link-local addresses
+// https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html
+// https://serverfault.com/questions/427018/what-is-this-ip-address-169-254-169-254
+const url = 'http://169.254.169.254/';
 fetch(url, {
     agent: agentWithFiltering
 }).catch(error => {
@@ -167,8 +169,8 @@ fetch(url, {
 ## Related
 
 - [welefen/ssrf-agent: make http(s) request to prevent SSRF](https://github.com/welefen/ssrf-agent)
-    - It provide only high level wrapper
-    - It only handle Private IP address that is definition in [node-ip](https://github.com/indutny/node-ip/blob/43e442366bf5a93493c8c4c36736f87d675b0c3d/lib/ip.js#L302-L314)
+    - It provides only high level wrapper
+    - It only handles Private IP address that is definition in [node-ip](https://github.com/indutny/node-ip/blob/43e442366bf5a93493c8c4c36736f87d675b0c3d/lib/ip.js#L302-L314)
         - Missing Meta IP Address like `0.0.0.0`
 
 ## Changelog
