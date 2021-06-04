@@ -24,9 +24,8 @@ export interface RequestFilteringAgentOptions {
     allowIPAddressList?: string[];
     // Deny address list
     // Default: []
-    denyIPAddressList?: string[]
+    denyIPAddressList?: string[];
 }
-
 
 /**
  * validate the address that is matched the validation options
@@ -35,7 +34,10 @@ export interface RequestFilteringAgentOptions {
  * @param family optional
  * @param options
  */
-const validateIPAddress = ({ address, host, family }: { address: string; host?: string; family?: string | number }, options: Required<RequestFilteringAgentOptions>) => {
+const validateIPAddress = (
+    { address, host, family }: { address: string; host?: string; family?: string | number },
+    options: Required<RequestFilteringAgentOptions>
+) => {
     // if it is not IP address, skip it
     if (net.isIP(address) === 0) {
         return;
@@ -50,16 +52,22 @@ const validateIPAddress = ({ address, host, family }: { address: string; host?: 
         if (!options.allowMetaIPAddress) {
             // address === "0.0.0.0" || address == "::"
             if (range === "unspecified") {
-                return new Error(`DNS lookup ${address}(family:${family}, host:${host}) is not allowed. Because, It is meta IP address.`);
+                return new Error(
+                    `DNS lookup ${address}(family:${family}, host:${host}) is not allowed. Because, It is meta IP address.`
+                );
             }
         }
         // TODO: rename option name
         if (!options.allowPrivateIPAddress && range !== "unicast") {
-            return new Error(`DNS lookup ${address}(family:${family}, host:${host}) is not allowed. Because, It is private IP address.`);
+            return new Error(
+                `DNS lookup ${address}(family:${family}, host:${host}) is not allowed. Because, It is private IP address.`
+            );
         }
 
         if (options.denyIPAddressList.length > 0 && options.denyIPAddressList.includes(address)) {
-            return new Error(`DNS lookup ${address}(family:${family}, host:${host}) is not allowed. Because It is defined in denyIPAddressList.`);
+            return new Error(
+                `DNS lookup ${address}(family:${family}, host:${host}) is not allowed. Because It is defined in denyIPAddressList.`
+            );
         }
     } catch (error) {
         return error; // if can not parsed IP address, throw error
@@ -87,13 +95,17 @@ const appliedAgentSet = new Set<http.Agent | https.Agent>();
 /**
  * Apply request filter to http(s).Agent instance
  */
-export function applyRequestFilter<T extends http.Agent | https.Agent>(agent: T, options?: RequestFilteringAgentOptions): T {
+export function applyRequestFilter<T extends http.Agent | https.Agent>(
+    agent: T,
+    options?: RequestFilteringAgentOptions
+): T {
     if (appliedAgentSet.has(agent)) {
         return agent;
     }
     appliedAgentSet.add(agent);
     const requestFilterOptions: Required<RequestFilteringAgentOptions> = {
-        allowPrivateIPAddress: options && options.allowPrivateIPAddress !== undefined ? options.allowPrivateIPAddress : false,
+        allowPrivateIPAddress:
+            options && options.allowPrivateIPAddress !== undefined ? options.allowPrivateIPAddress : false,
         allowMetaIPAddress: options && options.allowMetaIPAddress !== undefined ? options.allowMetaIPAddress : false,
         allowIPAddressList: options && options.allowIPAddressList ? options.allowIPAddressList : [],
         denyIPAddressList: options && options.denyIPAddressList ? options.denyIPAddressList : []

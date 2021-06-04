@@ -10,7 +10,7 @@ import * as http from "http";
 
 const TEST_PORT = 12456;
 const IS_IPV6_SUPPORTED = true;
-describe("request-filtering-agent", function() {
+describe("request-filtering-agent", function () {
     let close = () => {
         return Promise.resolve();
     };
@@ -46,9 +46,7 @@ describe("request-filtering-agent", function() {
         const agent = new RequestFilteringHttpAgent({
             allowPrivateIPAddress: true
         });
-        const privateIPs = [
-            `http://127.0.0.1:${TEST_PORT}`
-        ];
+        const privateIPs = [`http://127.0.0.1:${TEST_PORT}`];
         for (const ipAddress of privateIPs) {
             try {
                 await fetch(ipAddress, {
@@ -67,9 +65,7 @@ describe("request-filtering-agent", function() {
         const agentWithFiltering = applyRequestFilter(agent, {
             allowPrivateIPAddress: true
         });
-        const privateIPs = [
-            `http://127.0.0.1:${TEST_PORT}`
-        ];
+        const privateIPs = [`http://127.0.0.1:${TEST_PORT}`];
         for (const ipAddress of privateIPs) {
             try {
                 await fetch(ipAddress, {
@@ -83,10 +79,7 @@ describe("request-filtering-agent", function() {
     });
     it("0.0.0.0 and :: is metaAddress, it is disabled by default", async () => {
         const agent = new RequestFilteringHttpAgent();
-        const disAllowedIPs = [
-            `http://0.0.0.0:${TEST_PORT}`,
-            `http://[::]:${TEST_PORT}`
-        ];
+        const disAllowedIPs = [`http://0.0.0.0:${TEST_PORT}`, `http://[::]:${TEST_PORT}`];
         for (const ipAddress of disAllowedIPs) {
             try {
                 await fetch(ipAddress, {
@@ -107,10 +100,7 @@ describe("request-filtering-agent", function() {
             allowIPAddressList: ["127.0.0.1"],
             allowPrivateIPAddress: false
         });
-        const privateIPs = [
-            `http://127.0.0.1:${TEST_PORT}`,
-            `http://localhost:${TEST_PORT}`
-        ];
+        const privateIPs = [`http://127.0.0.1:${TEST_PORT}`, `http://localhost:${TEST_PORT}`];
         for (const ipAddress of privateIPs) {
             try {
                 await fetch(ipAddress, {
@@ -121,9 +111,7 @@ describe("request-filtering-agent", function() {
                 assert.fail(new Error("should fetch, because it is allow, error" + error));
             }
         }
-        const disAllowedPrivateIPs = [
-            `http://169.254.169.254:${TEST_PORT}`
-        ];
+        const disAllowedPrivateIPs = [`http://169.254.169.254:${TEST_PORT}`];
         for (const ipAddress of disAllowedPrivateIPs) {
             try {
                 await fetch(ipAddress, {
