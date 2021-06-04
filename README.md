@@ -54,7 +54,7 @@ fetch(url, {
 });
 ```
 
-`request-filtering-agent` support loopback domain like [nip.io](http://nip.io) and [nip.io](https://nip.io/).
+`request-filtering-agent` support loopback domain like [nip.io](http://nip.io).
 This library detects the IP address that is dns lookup-ed.
 
 ```
