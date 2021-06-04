@@ -15,7 +15,7 @@ describe("request-filtering-agent", function () {
         return Promise.resolve();
     };
     beforeEach(() => {
-        return new Promise((resolve) => {
+        return new Promise<void>((resolve) => {
             // response ok
             const server = http.createServer();
             server.on("request", (_req, res) => {
