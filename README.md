@@ -50,20 +50,20 @@ fetch(url, {
     // use http or https agent for url
     agent: useAgent(url)
 }).catch(err => {
-    console.err(err); // DNS lookup 127.0.0.1(family:4, host:127.0.0.1.xip.io) is not allowed. Because, It is private IP address.
+    console.err(err); // DNS lookup 127.0.0.1(family:4, host:127.0.0.1.nip.io) is not allowed. Because, It is private IP address.
 });
 ```
 
-`request-filtering-agent` support loopback domain like [xip.io](http://xip.io) and [nip.io](https://nip.io/).
+`request-filtering-agent` support loopback domain like [nip.io](http://nip.io) and [nip.io](https://nip.io/).
 This library detects the IP address that is dns lookup-ed.
 
 ```
-$ dig 127.0.0.1.xip.io
+$ dig 127.0.0.1.nip.io
 
-;127.0.0.1.xip.io.		IN	A
+;127.0.0.1.nip.io.		IN	A
 
 ;; ANSWER SECTION:
-127.0.0.1.xip.io.	300	IN	A	127.0.0.1
+127.0.0.1.nip.io.	300	IN	A	127.0.0.1
 ```
 
 Example code:
@@ -71,11 +71,11 @@ Example code:
 ```js
 const fetch = require("node-fetch");
 const { useAgent } = require("request-filtering-agent");
-const url = 'http://127.0.0.1.xip.io:8080/';
+const url = 'http://127.0.0.1.nip.io:8080/';
 fetch(url, {
     agent: useAgent(url)
 }).catch(err => {
-    console.err(err); // DNS lookup 127.0.0.1(family:4, host:127.0.0.1.xip.io) is not allowed. Because, It is private IP address.
+    console.err(err); // DNS lookup 127.0.0.1(family:4, host:127.0.0.1.nip.io) is not allowed. Because, It is private IP address.
 });
 ```
 

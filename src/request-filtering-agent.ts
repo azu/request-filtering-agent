@@ -134,7 +134,7 @@ export function applyRequestFilter<T extends http.Agent | https.Agent>(
             }
         });
         // Request with domain name
-        // Example: http://127.0.0.1.xip.io/
+        // Example: http://127.0.0.1.nip.io/
         addDropFilterSocket(requestFilterOptions, socket);
         return socket;
     };
