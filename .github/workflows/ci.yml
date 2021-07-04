@@ -2,6 +2,8 @@ name: ci
 
 on: [push]
 
+permissions:
+  contents: read
 jobs:
   build:
     name: Test on node ${{ matrix.node_version }}
