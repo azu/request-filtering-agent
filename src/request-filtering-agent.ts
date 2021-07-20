@@ -90,7 +90,7 @@ const addDropFilterSocket = (options: Required<RequestFilteringAgentOptions>, so
 
 // public
 // prevent twice apply
-const appliedAgentSet = new Set<http.Agent | https.Agent>();
+const appliedAgentSet = new WeakSet<http.Agent | https.Agent>();
 
 /**
  * Apply request filter to http(s).Agent instance
