@@ -105,6 +105,10 @@ export interface RequestFilteringAgentOptions {
     // Deny address list
     // Default: []
     denyIPAddressList?: string[]
+    // prevent url redirection attack
+    // connection not made to private IP adresses where the port is closed
+    // Default: false
+    stopPortScanningByUrlRedirection?: boolean;
 }
 /**
  * Apply request filter to http(s).Agent instance
