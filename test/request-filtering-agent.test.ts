@@ -243,4 +243,32 @@ describe("request-filtering-agent", function () {
             assert.fail(new Error("should fetch public ip, but it is failed"));
         }
     });
+    it("should fail to make request when stopPortScanningByUrlRedirection option is set to true", async () => {
+        const closedPort = TEST_PORT + 1;
+        const privateIPs = [
+            `http://0.0.0.0:${closedPort}`, // 0.0.0.0 is special
+            `http://127.0.0.1:${closedPort}`,
+            `http://A.com@127.0.0.1:${closedPort}`
+        ];
+        const agent = new RequestFilteringHttpAgent({
+            stopPortScanningByUrlRedirection: true
+        });
+        for (const ipAddress of privateIPs) {
+            try {
+                await fetch(ipAddress, {
+                    agent,
+                    timeout: 2000
+                });
+                throw new ReferenceError("SHOULD NOT BE CALLED");
+            } catch (error) {
+                if (error instanceof ReferenceError) {
+                    assert.fail(error);
+                }
+                assert.match(
+                    error.message,
+                    /^DNS lookup (0\.0\.0\.0|127\.0\.0\.1|undefined)\(family:undefined, host:(0\.0\.0\.0|127\.0\.0\.1|undefined)\) is not allowed. Because, It is private IP address.$/g
+                );
+            }
+        }
+    });
 });
