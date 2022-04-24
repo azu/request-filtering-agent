@@ -25,6 +25,10 @@ export interface RequestFilteringAgentOptions {
     // Deny address list
     // Default: []
     denyIPAddressList?: string[];
+    // prevent url redirection attack
+    // connection not made to private IP adresses where the port is closed
+    // Default: false
+    stopPortScanningByUrlRedirection?: boolean;
 }
 
 /**
@@ -108,7 +112,11 @@ export function applyRequestFilter<T extends http.Agent | https.Agent>(
             options && options.allowPrivateIPAddress !== undefined ? options.allowPrivateIPAddress : false,
         allowMetaIPAddress: options && options.allowMetaIPAddress !== undefined ? options.allowMetaIPAddress : false,
         allowIPAddressList: options && options.allowIPAddressList ? options.allowIPAddressList : [],
-        denyIPAddressList: options && options.denyIPAddressList ? options.denyIPAddressList : []
+        denyIPAddressList: options && options.denyIPAddressList ? options.denyIPAddressList : [],
+        stopPortScanningByUrlRedirection:
+            options && options.stopPortScanningByUrlRedirection !== undefined
+                ? options.stopPortScanningByUrlRedirection
+                : false
     };
     // override http.Agent#createConnection
     // https://nodejs.org/api/http.html#http_agent_createconnection_options_callback
@@ -117,6 +125,21 @@ export function applyRequestFilter<T extends http.Agent | https.Agent>(
     const createConnection = agent.createConnection;
     // @ts-expect-error - @types/node does not defined createConnection
     agent.createConnection = (options: TcpNetConnectOpts, connectionListener?: (error?: Error) => void) => {
+        if (requestFilterOptions.stopPortScanningByUrlRedirection) {
+            // Prevents malicious user from identifying which ports are open
+            const { host, family } = options;
+            if (host && net.isIP(host)) {
+                const addr = ipaddr.parse(host);
+                const range = addr.range();
+
+                if (range !== "unicast") {
+                    throw new Error(
+                        `DNS lookup ${host}(family:${family}, host:${host}) is not allowed. Because, It is private IP address.`
+                    );
+                }
+            }
+        }
+
         const socket = createConnection.call(agent, options, () => {
             // https://nodejs.org/api/net.html#net_socket_connect_options_connectlistener
             const { host } = options;
