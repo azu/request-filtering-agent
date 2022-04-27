@@ -38,7 +38,7 @@ Install with [npm](https://www.npmjs.com/):
 
 ## Usage
 
-`useAgent(url)` return an agent for the url.
+`useAgent(url, options)` return an agent for the url.
 
 The agent blocks the request to [Private network](https://en.wikipedia.org/wiki/Private_network) and [Reserved IP addresses](https://en.wikipedia.org/wiki/Reserved_IP_addresses) by default.
 
@@ -48,7 +48,7 @@ const { useAgent } = require("request-filtering-agent");
 const url = 'http://127.0.0.1:8080/';
 fetch(url, {
     // use http or https agent for url
-    agent: useAgent(url)
+    agent: useAgent(url, { stopPortScanningByUrlRedirection: true })
 }).catch(err => {
     console.err(err); // DNS lookup 127.0.0.1(family:4, host:127.0.0.1.nip.io) is not allowed. Because, It is private IP address.
 });
@@ -73,7 +73,7 @@ const fetch = require("node-fetch");
 const { useAgent } = require("request-filtering-agent");
 const url = 'http://127.0.0.1.nip.io:8080/';
 fetch(url, {
-    agent: useAgent(url)
+    agent: useAgent(url, { stopPortScanningByUrlRedirection: true })
 }).catch(err => {
     console.err(err); // DNS lookup 127.0.0.1(family:4, host:127.0.0.1.nip.io) is not allowed. Because, It is private IP address.
 });
@@ -133,7 +133,7 @@ export declare const globalHttpsAgent: RequestFilteringHttpsAgent;
  * return http or https agent
  * @param url
  */
-export declare const useAgent: (url: string) => RequestFilteringHttpAgent | RequestFilteringHttpsAgent;
+export declare const useAgent: (url: string, options?: https.AgentOptions & RequestFilteringAgentOptions) => RequestFilteringHttpAgent | RequestFilteringHttpsAgent;
 ```
 
 ### Example: Create an Agent with options
