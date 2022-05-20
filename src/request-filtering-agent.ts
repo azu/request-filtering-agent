@@ -191,5 +191,8 @@ export const globalHttpsAgent = new RequestFilteringHttpsAgent();
  * @param url
  */
 export const useAgent = (url: string, options?: https.AgentOptions & RequestFilteringAgentOptions) => {
+    if(!options) {
+       return url.startsWith("https") ? globalHttpsAgent : globalHttpAgent;
+    }
     return url.startsWith("https") ? new RequestFilteringHttpsAgent(options) : new RequestFilteringHttpAgent(options);
 };
