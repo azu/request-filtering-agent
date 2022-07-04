@@ -41,7 +41,7 @@ export interface RequestFilteringAgentOptions {
 const validateIPAddress = (
     { address, host, family }: { address: string; host?: string; family?: string | number },
     options: Required<RequestFilteringAgentOptions>
-) => {
+): null | undefined | Error => {
     // if it is not IP address, skip it
     if (net.isIP(address) === 0) {
         return;
@@ -74,7 +74,7 @@ const validateIPAddress = (
             );
         }
     } catch (error) {
-        return error; // if can not parsed IP address, throw error
+        return error as Error; // if can not parsed IP address, throw error
     }
     return;
 };
@@ -131,7 +131,6 @@ export function applyRequestFilter<T extends http.Agent | https.Agent>(
             if (host && net.isIP(host)) {
                 const addr = ipaddr.parse(host);
                 const range = addr.range();
-
                 if (range !== "unicast") {
                     throw new Error(
                         `DNS lookup ${host}(family:${family}, host:${host}) is not allowed. Because, It is private IP address.`
@@ -191,6 +190,9 @@ export const globalHttpsAgent = new RequestFilteringHttpsAgent();
  * return http or https agent
  * @param url
  */
-export const useAgent = (url: string) => {
-    return url.startsWith("https") ? globalHttpsAgent : globalHttpAgent;
+export const useAgent = (url: string, options?: https.AgentOptions & RequestFilteringAgentOptions) => {
+    if(!options) {
+       return url.startsWith("https") ? globalHttpsAgent : globalHttpAgent;
+    }
+    return url.startsWith("https") ? new RequestFilteringHttpsAgent(options) : new RequestFilteringHttpAgent(options);
 };
