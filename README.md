@@ -76,7 +76,7 @@ const fetch = require("node-fetch");
 const { useAgent } = require("request-filtering-agent");
 const url = 'http://127.0.0.1.nip.io:8080/';
 fetch(url, {
-    agent: useAgent(url, { stopPortScanningByUrlRedirection: true })
+    agent: useAgent(url)
 }).catch(err => {
     console.err(err); // DNS lookup 127.0.0.1(family:4, host:127.0.0.1.nip.io) is not allowed. Because, It is private IP address.
 });
