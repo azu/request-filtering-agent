@@ -24,6 +24,8 @@ This library provides Node.js's [http.Agent](https://nodejs.org/api/http.html#ht
 - Node.js's built-in `http` and `https`
 - [node-fetch](https://github.com/bitinn/node-fetch)
 - [Request](https://github.com/request/request)
+  - :memo: `request`'s `agent` may be insecure
+  - [CVE-2023-28155 Request allows a bypass of SSRF mitigations via an attacker-controller server that does a cross-protocol redirect · Issue #3442 · request/request](https://github.com/request/request/issues/3442)
 - [node-http-proxy](https://github.com/http-party/node-http-proxy)
 - [axios](https://github.com/axios/axios)
 - [got](https://github.com/sindresorhus/got)
