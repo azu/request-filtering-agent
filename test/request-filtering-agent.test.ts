@@ -86,11 +86,15 @@ describe("request-filtering-agent", function () {
                     agent,
                     timeout: 2000
                 });
+                console.log("???ss");
                 throw new ReferenceError("SHOULD NOT BE CALLED:" + ipAddress);
             } catch (error) {
+                console.log("??" + error);
                 if (error instanceof ReferenceError) {
                     assert.fail(error);
                 }
+            } finally {
+                console.log("??");
             }
         }
     });
@@ -204,7 +208,10 @@ describe("request-filtering-agent", function () {
                 if (error instanceof ReferenceError) {
                     assert.fail(error);
                 }
-                assert.ok(/It is private IP address/i.test(error.message), `Failed at ${ipAddress}, error: ${error}`);
+                assert.ok(
+                    /Because, It is private IP address./i.test(error.message),
+                    `Failed at ${ipAddress}, error: ${error}`
+                );
             }
         }
     });
