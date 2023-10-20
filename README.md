@@ -16,10 +16,6 @@ This library block the request to these IP addresses by default.
 
 So, This library block the request to non-`unicast` IP addresses.
 
-:warning: Node.js's built-in `fetch` does not support `http.Agent`.
-
-- [Passing a custom agent to `fetch()` · Issue #1489 · nodejs/undici](https://github.com/nodejs/undici/issues/1489)
-
 ## Support `http.Agent` libraries
 
 This library provides Node.js's [http.Agent](https://nodejs.org/api/http.html#http_class_http_agent) implementation.
