@@ -3,6 +3,7 @@ import { TcpNetConnectOpts } from "net";
 import * as http from "http";
 import * as https from "https";
 import ipaddr from "ipaddr.js";
+import { Socket } from "node:net";
 
 export interface RequestFilteringAgentOptions {
     // Allow to connect private IP address
@@ -19,7 +20,7 @@ export interface RequestFilteringAgentOptions {
     // Default: false
     allowMetaIPAddress?: boolean;
     // Allow address list
-    // This values are preferred than denyAddressList
+    // These values are preferred than denyAddressList
     // Default: []
     allowIPAddressList?: string[];
     // Deny address list
@@ -74,7 +75,7 @@ const validateIPAddress = (
             );
         }
     } catch (error) {
-        return error as Error; // if can not parsed IP address, throw error
+        return error as Error; // if can not parse IP address, throw error
     }
     return;
 };
@@ -167,9 +168,114 @@ export function applyRequestFilter<T extends http.Agent | https.Agent>(
  * A subclass of http.Agent with request filtering
  */
 export class RequestFilteringHttpAgent extends http.Agent {
+    private requestFilterOptions: Required<RequestFilteringAgentOptions>;
+
     constructor(options?: http.AgentOptions & RequestFilteringAgentOptions) {
         super(options);
-        applyRequestFilter(this, options);
+        this.requestFilterOptions = {
+            allowPrivateIPAddress:
+                options && options.allowPrivateIPAddress !== undefined ? options.allowPrivateIPAddress : false,
+            allowMetaIPAddress:
+                options && options.allowMetaIPAddress !== undefined ? options.allowMetaIPAddress : false,
+            allowIPAddressList: options && options.allowIPAddressList ? options.allowIPAddressList : [],
+            denyIPAddressList: options && options.denyIPAddressList ? options.denyIPAddressList : [],
+            stopPortScanningByUrlRedirection:
+                options && options.stopPortScanningByUrlRedirection !== undefined
+                    ? options.stopPortScanningByUrlRedirection
+                    : false
+        };
+    }
+
+    createConnection(options: TcpNetConnectOpts, connectionListener?: (error: Error | null, socket: Socket) => void) {
+        console.log("createConnectio !!!!n");
+        let validationError: Error | null | undefined = null;
+        if (this.requestFilterOptions.stopPortScanningByUrlRedirection) {
+            // Prevents malicious user from identifying which ports are open
+            const { host, family } = options;
+            if (host && net.isIP(host)) {
+                const addr = ipaddr.parse(host);
+                const range = addr.range();
+                if (range !== "unicast") {
+                    throw new Error(
+                        `DNS lookup ${host}(family:${family}, host:${host}) is not allowed. Because, It is private IP address.`
+                    );
+                }
+            }
+        }
+        // console.log("createConnection", options);
+        const { host } = options;
+        if (host) {
+            // Direct ip address request without dns-lookup
+            // Example: http://127.0.0.1
+            // https://nodejs.org/api/net.html#net_socket_connect_options_connectlistener
+            validationError = validateIPAddress({ address: host }, this.requestFilterOptions);
+        }
+        // https://nodejs.org/api/net.html#net_socket_connect_options_connectlistener
+        let isSocketEnding = false;
+        // @ts-expect-error - @types/node does not defined createConnection
+        const socket: Socket = super.createConnection(options, connectionListener);
+        const onReady = () => {
+            if (validationError) {
+                if (isSocketEnding) {
+                    return;
+                }
+                if (socket.destroyed) {
+                    return;
+                }
+                isSocketEnding = true;
+                socket.removeListener("ready", onReady);
+                socket.end(() => {
+                    console.log("end 1");
+                    if (validationError) {
+                        if (socket.destroyed) {
+                            return;
+                        }
+                        socket.destroy(validationError);
+                    }
+                });
+            }
+        };
+        socket.addListener("ready", onReady);
+        // Request with domain name
+        // Example: http://127.0.0.1.nip.io/
+        const weakSet = new WeakSet<Socket>();
+        const onLookup = (err: Error, address: string, family: string | number, host: string): void => {
+            if (err) {
+                return;
+            }
+            console.log({
+                family,
+                host
+            });
+            const error = validateIPAddress({ address, family, host }, this.requestFilterOptions);
+            console.log("validation 2 ", error);
+            if (error) {
+                console.log("error 2", {
+                    isSocketDestroyed: socket.destroyed,
+                    connecting: socket.connecting,
+                    pending: socket.pending
+                });
+                if (weakSet.has(socket)) {
+                    return;
+                }
+                weakSet.add(socket);
+                socket.removeListener("lookup", onLookup);
+                if (socket.destroyed) {
+                    return;
+                }
+                socket.end(() => {
+                    console.log("end 2");
+                    if (socket.destroyed) {
+                        return;
+                    }
+                    console.log("end 3 ", socket.destroyed);
+                    console.log("end errr", validationError?.message);
+                    socket.destroy(error);
+                });
+            }
+        };
+        socket.addListener("lookup", onLookup);
+        return socket;
     }
 }
 
@@ -177,9 +283,116 @@ export class RequestFilteringHttpAgent extends http.Agent {
  * A subclass of https.Agent with request filtering
  */
 export class RequestFilteringHttpsAgent extends https.Agent {
+    private requestFilterOptions: Required<RequestFilteringAgentOptions>;
+
     constructor(options?: https.AgentOptions & RequestFilteringAgentOptions) {
         super(options);
-        applyRequestFilter(this, options);
+        this.requestFilterOptions = {
+            allowPrivateIPAddress:
+                options && options.allowPrivateIPAddress !== undefined ? options.allowPrivateIPAddress : false,
+            allowMetaIPAddress:
+                options && options.allowMetaIPAddress !== undefined ? options.allowMetaIPAddress : false,
+            allowIPAddressList: options && options.allowIPAddressList ? options.allowIPAddressList : [],
+            denyIPAddressList: options && options.denyIPAddressList ? options.denyIPAddressList : [],
+            stopPortScanningByUrlRedirection:
+                options && options.stopPortScanningByUrlRedirection !== undefined
+                    ? options.stopPortScanningByUrlRedirection
+                    : false
+        };
+    }
+
+    createConnection(options: TcpNetConnectOpts, connectionListener?: (error: Error | null, socket: Socket) => void) {
+        console.log("createConnectio !!!!n");
+        let validationError: Error | null | undefined = null;
+        if (this.requestFilterOptions.stopPortScanningByUrlRedirection) {
+            // Prevents malicious user from identifying which ports are open
+            const { host, family } = options;
+            if (host && net.isIP(host)) {
+                const addr = ipaddr.parse(host);
+                const range = addr.range();
+                if (range !== "unicast") {
+                    throw new Error(
+                        `DNS lookup ${host}(family:${family}, host:${host}) is not allowed. Because, It is private IP address.`
+                    );
+                }
+            }
+        }
+        // console.log("createConnection", options);
+        const { host } = options;
+        if (host) {
+            // Direct ip address request without dns-lookup
+            // Example: http://127.0.0.1
+            // https://nodejs.org/api/net.html#net_socket_connect_options_connectlistener
+            validationError = validateIPAddress({ address: host }, this.requestFilterOptions);
+        }
+        // https://nodejs.org/api/net.html#net_socket_connect_options_connectlistener
+        let isSocketEnding = false;
+        // @ts-expect-error - @types/node does not defined createConnection
+        const socket: Socket = super.createConnection(options, connectionListener);
+        const onReady = () => {
+            if (validationError) {
+                if (isSocketEnding) {
+                    return;
+                }
+                if (socket.destroyed) {
+                    return;
+                }
+                isSocketEnding = true;
+                socket.removeListener("ready", onReady);
+                socket.end(() => {
+                    console.log("end 1");
+                    if (validationError) {
+                        if (socket.destroyed) {
+                            return;
+                        }
+                        socket.destroy(validationError);
+                    }
+                });
+            }
+        };
+        socket.addListener("ready", onReady);
+        // Request with domain name
+        // Example: http://127.0.0.1.nip.io/
+        let isEndong: boolean = false;
+        const weakSet = new WeakSet<Socket>();
+        const onLookup = (err: Error, address: string, family: string | number, host: string): void => {
+            if (err) {
+                return;
+            }
+            const error = validateIPAddress({ address, family, host }, this.requestFilterOptions);
+            console.log("validation 2 ", error);
+            if (error) {
+                console.log("error 2", {
+                    isEndong,
+                    isSocketDestroyed: socket.destroyed,
+                    connecting: socket.connecting,
+                    pending: socket.pending
+                });
+                if (weakSet.has(socket)) {
+                    return;
+                }
+                if (isEndong) {
+                    return;
+                }
+                weakSet.add(socket);
+                isEndong = true;
+                socket.removeListener("lookup", onLookup);
+                if (socket.destroyed) {
+                    return;
+                }
+                socket.end(() => {
+                    console.log("end 2");
+                    if (socket.destroyed) {
+                        return;
+                    }
+                    console.log("end 3 ", socket.destroyed);
+                    console.log("end errr", validationError?.message);
+                    socket.destroy(error);
+                });
+            }
+        };
+        socket.addListener("lookup", onLookup);
+        return socket;
     }
 }
 

@@ -86,18 +86,22 @@ describe("request-filtering-agent", function () {
                     agent,
                     timeout: 2000
                 });
+                console.log("???ss");
                 throw new ReferenceError("SHOULD NOT BE CALLED:" + ipAddress);
             } catch (error) {
+                console.log("??" + error);
                 if (error instanceof ReferenceError) {
                     assert.fail(error);
                 }
+            } finally {
+                console.log("??");
             }
         }
     });
 
     it("should allow http://127.0.0.1, but other private ip is disallowed", async () => {
         const agent = new RequestFilteringHttpAgent({
-            allowIPAddressList: ["127.0.0.1"],
+            allowIPAddressList: ["127.0.0.1", "::1"],
             allowPrivateIPAddress: false
         });
         const privateIPs = [`http://127.0.0.1:${TEST_PORT}`, `http://localhost:${TEST_PORT}`];
@@ -204,7 +208,10 @@ describe("request-filtering-agent", function () {
                 if (error instanceof ReferenceError) {
                     assert.fail(error);
                 }
-                assert.ok(/It is private IP address/i.test(error.message), `Failed at ${ipAddress}, error: ${error}`);
+                assert.ok(
+                    /Because, It is private IP address./i.test(error.message),
+                    `Failed at ${ipAddress}, error: ${error}`
+                );
             }
         }
     });
