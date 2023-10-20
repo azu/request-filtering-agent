@@ -250,11 +250,6 @@ export class RequestFilteringHttpAgent extends http.Agent {
             const error = validateIPAddress({ address, family, host }, this.requestFilterOptions);
             console.log("validation 2 ", error);
             if (error) {
-                console.log("error 2", {
-                    isSocketDestroyed: socket.destroyed,
-                    connecting: socket.connecting,
-                    pending: socket.pending
-                });
                 if (weakSet.has(socket)) {
                     return;
                 }
@@ -362,12 +357,6 @@ export class RequestFilteringHttpsAgent extends https.Agent {
             const error = validateIPAddress({ address, family, host }, this.requestFilterOptions);
             console.log("validation 2 ", error);
             if (error) {
-                console.log("error 2", {
-                    isEndong,
-                    isSocketDestroyed: socket.destroyed,
-                    connecting: socket.connecting,
-                    pending: socket.pending
-                });
                 if (weakSet.has(socket)) {
                     return;
                 }
