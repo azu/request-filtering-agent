@@ -3,7 +3,7 @@ import { TcpNetConnectOpts } from "net";
 import * as http from "http";
 import * as https from "https";
 import ipaddr from "ipaddr.js";
-import { Socket } from "node:net";
+import { Socket } from "net";
 
 export interface RequestFilteringAgentOptions {
     // Allow to connect private IP address
