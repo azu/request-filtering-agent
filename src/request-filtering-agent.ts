@@ -136,6 +136,8 @@ export class RequestFilteringHttpAgent extends http.Agent {
             const validationError = validateIPAddress({ address, family, host }, this.requestFilterOptions);
             if (validationError) {
                 socket.removeListener("lookup", onLookup);
+                // When just call destroy without end, Node.js 20 throws INTERNAL error.
+                // https://github.com/azu/request-filtering-agent/pull/16#discussion_r1367669822
                 socket.end(() => {
                     socket.destroy(validationError);
                 });
@@ -190,6 +192,8 @@ export class RequestFilteringHttpsAgent extends https.Agent {
             const validationError = validateIPAddress({ address, family, host }, this.requestFilterOptions);
             if (validationError) {
                 socket.removeListener("lookup", onLookup);
+                // When just call destroy without end, Node.js 20 throws INTERNAL error.
+                // https://github.com/azu/request-filtering-agent/pull/16#discussion_r1367669822
                 socket.end(() => {
                     socket.destroy(validationError);
                 });
