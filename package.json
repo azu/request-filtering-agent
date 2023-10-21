@@ -32,18 +32,13 @@
     "test": "test"
   },
   "scripts": {
-    "build": "cross-env NODE_ENV=production tsc -p .",
+    "build": "tsc -p .",
     "clean": "rimraf lib/",
     "prepublish": "npm run --if-present build",
     "test": "mocha \"test/**/*.ts\"",
     "watch": "tsc -p . --watch",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,css}\"",
     "prepare": "git config --local core.hooksPath .githooks"
-  },
-  "husky": {
-    "hooks": {
-      "precommit": "lint-staged"
-    }
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,css}": [
@@ -57,21 +52,20 @@
     "trailingComma": "none"
   },
   "devDependencies": {
-    "@types/ip": "^1.1.0",
-    "@types/mocha": "^8.2.2",
-    "@types/node": "^15.12.0",
-    "@types/node-fetch": "^2.5.10",
-    "cross-env": "^7.0.3",
-    "lint-staged": "^11.0.0",
-    "mocha": "^8.4.0",
-    "node-fetch": "^2.6.1",
-    "prettier": "^2.3.0",
-    "rimraf": "^3.0.0",
-    "ts-node": "^10.0.0",
+    "@types/ip": "^1.1.2",
+    "@types/mocha": "^10.0.3",
+    "@types/node": "^20.8.7",
+    "@types/node-fetch": "^2.6.7",
+    "lint-staged": "^15.0.2",
+    "mocha": "^10.2.0",
+    "node-fetch": "^2.7.0",
+    "prettier": "^3.0.3",
+    "rimraf": "^5.0.5",
+    "ts-node": "^10.9.1",
     "ts-node-test-register": "^10.0.0",
-    "typescript": "^4.3.2"
+    "typescript": "^5.2.2"
   },
   "dependencies": {
-    "ipaddr.js": "^2.0.0"
+    "ipaddr.js": "^2.1.0"
   }
 }

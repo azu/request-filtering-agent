@@ -114,11 +114,11 @@ describe("request-filtering-agent", function () {
                     timeout: 2000
                 });
                 throw new ReferenceError("SHOULD NOT BE CALLED");
-            } catch (error) {
+            } catch (error: any) {
                 if (error instanceof ReferenceError) {
                     assert.fail(error);
                 }
-                // shoud be validation error
+                // should be validation error
                 assert.match(error.message, /It is private IP address/);
             }
         }
@@ -134,11 +134,11 @@ describe("request-filtering-agent", function () {
                     timeout: 2000
                 });
                 throw new ReferenceError("SHOULD NOT BE CALLED");
-            } catch (error) {
+            } catch (error: any) {
                 if (error instanceof ReferenceError) {
                     assert.fail(error);
                 }
-                // shoud be validation error
+                // should be validation error
                 assert.match(error.message, /It is meta IP address/);
             }
         }
@@ -161,7 +161,7 @@ describe("request-filtering-agent", function () {
                     timeout: 2000
                 });
                 throw new ReferenceError("SHOULD NOT BE CALLED");
-            } catch (error) {
+            } catch (error: any) {
                 if (error instanceof ReferenceError) {
                     assert.fail(error);
                 }
@@ -196,7 +196,7 @@ describe("request-filtering-agent", function () {
                     timeout: 10000
                 });
                 throw new ReferenceError("SHOULD NOT BE CALLED");
-            } catch (error) {
+            } catch (error: any) {
                 if (error instanceof ReferenceError) {
                     assert.fail(error);
                 }
@@ -225,7 +225,7 @@ describe("request-filtering-agent", function () {
                     timeout: 2000
                 });
                 throw new ReferenceError("SHOULD NOT BE CALLED");
-            } catch (error) {
+            } catch (error: any) {
                 if (error instanceof ReferenceError) {
                     assert.fail(error);
                 }
