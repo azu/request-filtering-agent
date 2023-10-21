@@ -118,11 +118,7 @@ export interface RequestFilteringAgentOptions {
     allowIPAddressList?: string[];
     // Deny address list
     // Default: []
-    denyIPAddressList?: string[]
-    // prevent url redirection attack
-    // connection not made to private IP adresses where the port is closed
-    // Default: false
-    stopPortScanningByUrlRedirection?: boolean;
+    denyIPAddressList?: string[];
 }
 /**
  * Apply request filter to http(s).Agent instance
