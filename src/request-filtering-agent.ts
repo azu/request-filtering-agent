@@ -110,6 +110,9 @@ export class RequestFilteringHttpAgent extends http.Agent {
         };
     }
 
+    // override http.Agent#createConnection
+    // https://nodejs.org/api/http.html#http_agent_createconnection_options_callback
+    // https://nodejs.org/api/net.html#net_net_createconnection_options_connectlistener
     createConnection(options: TcpNetConnectOpts, connectionListener?: (error: Error | null, socket: Socket) => void) {
         const { host } = options;
         if (host !== undefined) {
@@ -161,6 +164,9 @@ export class RequestFilteringHttpsAgent extends https.Agent {
         };
     }
 
+    // override http.Agent#createConnection
+    // https://nodejs.org/api/http.html#http_agent_createconnection_options_callback
+    // https://nodejs.org/api/net.html#net_net_createconnection_options_connectlistener
     createConnection(options: TcpNetConnectOpts, connectionListener?: (error: Error | null, socket: Socket) => void) {
         const { host } = options;
         if (host !== undefined) {
@@ -200,6 +206,7 @@ export const globalHttpsAgent = new RequestFilteringHttpsAgent();
  * Get an agent for the url
  * return http or https agent
  * @param url
+ * @param options
  */
 export const useAgent = (url: string, options?: https.AgentOptions & RequestFilteringAgentOptions) => {
     if (!options) {

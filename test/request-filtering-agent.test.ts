@@ -13,12 +13,7 @@ describe("request-filtering-agent", function () {
         return new Promise<void>((resolve) => {
             // response ok
             const server = http.createServer();
-            server.on("request", (req, res) => {
-                if (req.url === "/redirect") {
-                    console.log("redirect");
-                    res.writeHead(301, { Location: `http://0.0.0.0:${TEST_PORT + 1}` });
-                    return;
-                }
+            server.on("request", (_req, res) => {
                 res.writeHead(200, { "Content-Type": "text/plain" });
                 res.write("ok");
                 res.end();
