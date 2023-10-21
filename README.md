@@ -6,8 +6,8 @@ It helps to prevent [server-side request forgery (SSRF)](https://en.wikipedia.or
 
 - [What is SSRF (Server-side request forgery)? Tutorial & Examples](https://portswigger.net/web-security/ssrf)
 
-This library depend on [ipaddr.js](https://github.com/whitequark/ipaddr.js) definitions.
-This library block the request to these IP addresses by default.
+This library depends on [ipaddr.js](https://github.com/whitequark/ipaddr.js) definitions.
+This library blocks the request to these IP addresses by default.
 
 - [Private IPv4 addresses](https://en.wikipedia.org/wiki/Private_network#Private_IPv4_addresses)
 - [Private IPv6 addresses](https://en.wikipedia.org/wiki/Private_network#Private_IPv6_addresses)
