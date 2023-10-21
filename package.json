@@ -32,7 +32,7 @@
     "test": "test"
   },
   "scripts": {
-    "build": "cross-env NODE_ENV=production tsc -p .",
+    "build": "tsc -p .",
     "clean": "rimraf lib/",
     "prepublish": "npm run --if-present build",
     "test": "mocha \"test/**/*.ts\"",
@@ -56,7 +56,6 @@
     "@types/mocha": "^10.0.3",
     "@types/node": "^20.8.7",
     "@types/node-fetch": "^2.6.7",
-    "cross-env": "^7.0.3",
     "lint-staged": "^15.0.2",
     "mocha": "^10.2.0",
     "node-fetch": "^2.6.1",
