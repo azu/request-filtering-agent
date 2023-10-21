@@ -121,10 +121,6 @@ export interface RequestFilteringAgentOptions {
     denyIPAddressList?: string[];
 }
 /**
- * Apply request filter to http(s).Agent instance
- */
-export declare function applyRequestFilter<T extends http.Agent | https.Agent>(agent: T, options?: RequestFilteringAgentOptions): T;
-/**
  * A subclass of http.Agent with request filtering
  */
 export declare class RequestFilteringHttpAgent extends http.Agent {
