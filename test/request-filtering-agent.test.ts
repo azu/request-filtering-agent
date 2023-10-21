@@ -1,11 +1,6 @@
 import * as assert from "assert";
 import fetch from "node-fetch";
-import {
-    globalHttpAgent,
-    RequestFilteringHttpAgent,
-    useAgent,
-    applyRequestFilter
-} from "../src/request-filtering-agent";
+import { globalHttpAgent, RequestFilteringHttpAgent, useAgent } from "../src/request-filtering-agent";
 import * as http from "http";
 
 const TEST_PORT = 12456;
@@ -58,25 +53,6 @@ describe("request-filtering-agent", function () {
             }
         }
     });
-    it("apply request filtering to existing http.Agent", async () => {
-        const agent = new http.Agent({
-            keepAlive: true
-        });
-        const agentWithFiltering = applyRequestFilter(agent, {
-            allowPrivateIPAddress: true
-        });
-        const privateIPs = [`http://127.0.0.1:${TEST_PORT}`];
-        for (const ipAddress of privateIPs) {
-            try {
-                await fetch(ipAddress, {
-                    agent: agentWithFiltering,
-                    timeout: 2000
-                });
-            } catch (error) {
-                assert.fail(new Error("should fetch, because it is allow, error" + error));
-            }
-        }
-    });
     it("0.0.0.0 and :: is metaAddress, it is disabled by default", async () => {
         const agent = new RequestFilteringHttpAgent();
         const disAllowedIPs = [`http://0.0.0.0:${TEST_PORT}`, `http://[::]:${TEST_PORT}`];
@@ -97,7 +73,7 @@ describe("request-filtering-agent", function () {
 
     it("should allow http://127.0.0.1, but other private ip is disallowed", async () => {
         const agent = new RequestFilteringHttpAgent({
-            allowIPAddressList: ["127.0.0.1"],
+            allowIPAddressList: ["127.0.0.1", "::1"],
             allowPrivateIPAddress: false
         });
         const privateIPs = [`http://127.0.0.1:${TEST_PORT}`, `http://localhost:${TEST_PORT}`];
@@ -126,9 +102,8 @@ describe("request-filtering-agent", function () {
             }
         }
     });
-    it("IPv4: should not request because Socket is closed", async () => {
+    it("IPv4: should not request because it is private IP", async () => {
         const privateIPs = [
-            `http://0.0.0.0:${TEST_PORT}`, // 0.0.0.0 is special
             `http://127.0.0.1:${TEST_PORT}`, //
             `http://A.com@127.0.0.1:${TEST_PORT}`
         ];
@@ -143,7 +118,28 @@ describe("request-filtering-agent", function () {
                 if (error instanceof ReferenceError) {
                     assert.fail(error);
                 }
-                assert.strictEqual(error.type, "system", `Failed at ${ipAddress}, error: ${error}`);
+                // shoud be validation error
+                assert.match(error.message, /It is private IP address/);
+            }
+        }
+    });
+    it("IPv4: should not request because it is meta/unspecified IP", async () => {
+        const privateIPs = [
+            `http://0.0.0.0:${TEST_PORT}` // 0.0.0.0 is special
+        ];
+        for (const ipAddress of privateIPs) {
+            try {
+                await fetch(ipAddress, {
+                    agent: useAgent(ipAddress),
+                    timeout: 2000
+                });
+                throw new ReferenceError("SHOULD NOT BE CALLED");
+            } catch (error) {
+                if (error instanceof ReferenceError) {
+                    assert.fail(error);
+                }
+                // shoud be validation error
+                assert.match(error.message, /It is meta IP address/);
             }
         }
     });
@@ -169,8 +165,8 @@ describe("request-filtering-agent", function () {
                 if (error instanceof ReferenceError) {
                     assert.fail(error);
                 }
-                // Should be system error
-                assert.strictEqual(error.type, "system", `Failed at ${ipAddress}, error: ${error}`);
+                // should be validation error
+                assert.match(error.message, /It is private IP address/);
             }
         }
     });
@@ -204,7 +200,10 @@ describe("request-filtering-agent", function () {
                 if (error instanceof ReferenceError) {
                     assert.fail(error);
                 }
-                assert.ok(/It is private IP address/i.test(error.message), `Failed at ${ipAddress}, error: ${error}`);
+                assert.ok(
+                    /Because, It is private IP address./i.test(error.message),
+                    `Failed at ${ipAddress}, error: ${error}`
+                );
             }
         }
     });
@@ -241,34 +240,6 @@ describe("request-filtering-agent", function () {
             });
         } catch (error) {
             assert.fail(new Error("should fetch public ip, but it is failed"));
-        }
-    });
-    it("should fail to make request when stopPortScanningByUrlRedirection option is set to true", async () => {
-        const closedPort = TEST_PORT + 1;
-        const privateIPs = [
-            `http://0.0.0.0:${closedPort}`, // 0.0.0.0 is special
-            `http://127.0.0.1:${closedPort}`,
-            `http://A.com@127.0.0.1:${closedPort}`
-        ];
-        const agent = new RequestFilteringHttpAgent({
-            stopPortScanningByUrlRedirection: true
-        });
-        for (const ipAddress of privateIPs) {
-            try {
-                await fetch(ipAddress, {
-                    agent,
-                    timeout: 2000
-                });
-                throw new ReferenceError("SHOULD NOT BE CALLED");
-            } catch (error) {
-                if (error instanceof ReferenceError) {
-                    assert.fail(error);
-                }
-                assert.match(
-                    error.message,
-                    /^DNS lookup (0\.0\.0\.0|127\.0\.0\.1|undefined)\(family:undefined, host:(0\.0\.0\.0|127\.0\.0\.1|undefined)\) is not allowed. Because, It is private IP address.$/g
-                );
-            }
         }
     });
 });
