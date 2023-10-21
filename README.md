@@ -164,34 +164,6 @@ fetch(url, {
 });
 ```
 
-### Example: Apply request filtering to excising `http.Agent`
-
-You can apply request filtering to `http.Agent` or `https.Agent` using `applyRequestFilter` method.
-
-```js
-const http = require("http")
-const fetch = require("node-fetch");
-const { applyRequestFilter } = require("request-filtering-agent");
-
-// Create http agent with keepAlive option
-const agent = new http.Agent({
-    keepAlive: true,
-});
-// Apply request filtering to http.Agent
-const agentWithFiltering = applyRequestFilter(agent, {
-    allowPrivateIPAddress: false // Default: false
-});
-// 169.254.169.254 is private ip address aka. link-local addresses
-// https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html
-// https://serverfault.com/questions/427018/what-is-this-ip-address-169-254-169-254
-const url = 'http://169.254.169.254/';
-fetch(url, {
-    agent: agentWithFiltering
-}).catch(error => {
-    console.error(error); // Dis-allowed
-});
-```
-
 ## Related
 
 - [welefen/ssrf-agent: make http(s) request to prevent SSRF](https://github.com/welefen/ssrf-agent)
