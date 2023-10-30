@@ -4,6 +4,7 @@ import * as http from "http";
 import * as https from "https";
 import ipaddr from "ipaddr.js";
 import { Socket } from "net";
+import * as dns from "dns";
 
 export interface RequestFilteringAgentOptions {
     // Allow to connect private IP address if allowPrivateIPAddress is true
@@ -82,6 +83,59 @@ const validateIPAddress = (
     return;
 };
 
+// @types/node has a poor definition of this callback (uses "addresses" version if option.all = true)
+type LookupOneCallback = (err: NodeJS.ErrnoException | null, address?: string, family?: number) => void;
+type LookupAllCallback = (err: NodeJS.ErrnoException | null, addresses?: dns.LookupAddress[]) => void;
+type LookupCallback = LookupOneCallback | LookupAllCallback;
+
+const makeLookup = (
+    createConnectionOptions: TcpNetConnectOpts,
+    requestFilterOptions: Required<RequestFilteringAgentOptions>
+): Required<net.TcpSocketConnectOpts>["lookup"] => {
+    // @ts-expect-error - @types/node has a poor definition of this callback
+    return (hostname, options, cb: LookupCallback) => {
+        const lookup = createConnectionOptions.lookup || dns.lookup;
+        let lookupCb: LookupCallback;
+        if (options.all) {
+            lookupCb = ((err, addresses) => {
+                if (err) {
+                    cb(err);
+                    return;
+                }
+                for (const { address, family } of addresses!) {
+                    const validationError = validateIPAddress(
+                        { address, family, host: hostname },
+                        requestFilterOptions
+                    );
+                    if (validationError) {
+                        cb(validationError);
+                        return;
+                    }
+                }
+                (cb as LookupAllCallback)(null, addresses);
+            }) as LookupAllCallback;
+        } else {
+            lookupCb = ((err, address, family) => {
+                if (err) {
+                    cb(err);
+                    return;
+                }
+                const validationError = validateIPAddress(
+                    { address: address!, family: family!, host: hostname },
+                    requestFilterOptions
+                );
+                if (validationError) {
+                    cb(validationError);
+                    return;
+                }
+                (cb as LookupOneCallback)(null, address!, family!);
+            }) as LookupOneCallback;
+        }
+        // @ts-expect-error - @types/node has a poor definition of this callback
+        lookup(hostname, options, lookupCb);
+    };
+};
+
 /**
  * A subclass of http.Agent with request filtering
  */
@@ -126,25 +180,10 @@ export class RequestFilteringHttpAgent extends http.Agent {
         }
         // https://nodejs.org/api/net.html#net_socket_connect_options_connectlistener
         // @ts-expect-error - @types/node does not defined createConnection
-        const socket: Socket = super.createConnection(options, connectionListener);
-        // Request with domain name
-        // Example: http://127.0.0.1.nip.io/
-        const onLookup = (err: Error, address: string, family: string | number, host: string): void => {
-            if (err) {
-                return;
-            }
-            const validationError = validateIPAddress({ address, family, host }, this.requestFilterOptions);
-            if (validationError) {
-                socket.removeListener("lookup", onLookup);
-                // When just call destroy without end, Node.js 20 throws INTERNAL error.
-                // https://github.com/azu/request-filtering-agent/pull/16#discussion_r1367669822
-                socket.end(() => {
-                    socket.destroy(validationError);
-                });
-            }
-        };
-        socket.addListener("lookup", onLookup);
-        return socket;
+        return super.createConnection(
+            { ...options, lookup: makeLookup(options, this.requestFilterOptions) },
+            connectionListener
+        );
     }
 }
 
@@ -182,25 +221,10 @@ export class RequestFilteringHttpsAgent extends https.Agent {
         }
         // https://nodejs.org/api/net.html#net_socket_connect_options_connectlistener
         // @ts-expect-error - @types/node does not defined createConnection
-        const socket: Socket = super.createConnection(options, connectionListener);
-        // Request with domain name
-        // Example: http://127.0.0.1.nip.io/
-        const onLookup = (err: Error, address: string, family: string | number, host: string): void => {
-            if (err) {
-                return;
-            }
-            const validationError = validateIPAddress({ address, family, host }, this.requestFilterOptions);
-            if (validationError) {
-                socket.removeListener("lookup", onLookup);
-                // When just call destroy without end, Node.js 20 throws INTERNAL error.
-                // https://github.com/azu/request-filtering-agent/pull/16#discussion_r1367669822
-                socket.end(() => {
-                    socket.destroy(validationError);
-                });
-            }
-        };
-        socket.addListener("lookup", onLookup);
-        return socket;
+        return super.createConnection(
+            { ...options, lookup: makeLookup(options, this.requestFilterOptions) },
+            connectionListener
+        );
     }
 }
 
