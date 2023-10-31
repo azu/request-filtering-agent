@@ -1,6 +1,6 @@
 {
   "name": "request-filtering-agent",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "An http(s).Agent implementation that block request Private IP address.",
   "homepage": "https://github.com/azu/request-filtering-agent",
   "bugs": {
