@@ -187,6 +187,8 @@ describe("request-filtering-agent", function () {
             `http://127.0.0.1.nip.io:${TEST_PORT}/`, // wildcard domain
             `https://127.0.0.1.nip.io:${TEST_PORT}/`, // wildcard domain
             `http://localhost:${TEST_PORT}`,
+            `http://localhost`,
+            `https://localhost`,
             `http://bit.ly/3z04dcF` // redirect to http://127.0.0.1.nip.io:12456
         ];
         for (const ipAddress of privateIPs) {
