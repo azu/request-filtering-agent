@@ -39,7 +39,7 @@
     "build": "tsc -p .",
     "clean": "rimraf lib/",
     "prepublish": "npm run --if-present build",
-    "test": "node --import=amaro --test \"test/**/*.test.ts\"",
+    "test": "node --experimental-strip-types --test \"test/**/*.test.ts\"",
     "watch": "tsc -p . --watch",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,css}\"",
     "prepare": "git config --local core.hooksPath .githooks"
@@ -59,7 +59,6 @@
     "@types/ip": "^1.1.2",
     "@types/node": "^20.8.7",
     "@types/node-fetch": "^2.6.7",
-    "amaro": "^1.1.1",
     "lint-staged": "^15.0.2",
     "node-fetch": "^2.7.0",
     "prettier": "^3.0.3",
