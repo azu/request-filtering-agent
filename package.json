@@ -3,6 +3,9 @@
   "version": "2.0.1",
   "type": "module",
   "description": "An http(s).Agent implementation that block request Private IP address.",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "homepage": "https://github.com/azu/request-filtering-agent",
   "bugs": {
     "url": "https://github.com/azu/request-filtering-agent/issues"
