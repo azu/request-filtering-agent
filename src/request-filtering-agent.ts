@@ -1,10 +1,9 @@
-import * as net from "net";
-import { TcpNetConnectOpts } from "net";
-import * as http from "http";
-import * as https from "https";
+import * as net from "node:net";
+import type { TcpNetConnectOpts, Socket } from "node:net";
+import * as http from "node:http";
+import * as https from "node:https";
 import ipaddr from "ipaddr.js";
-import { Socket } from "net";
-import * as dns from "dns";
+import * as dns from "node:dns";
 
 export interface RequestFilteringAgentOptions {
     // Allow to connect private IP address if allowPrivateIPAddress is true
