@@ -39,7 +39,8 @@
     "build": "tsc -p .",
     "clean": "rimraf lib/",
     "prepublish": "npm run --if-present build",
-    "test": "node --experimental-strip-types --experimental-transform-types --test \"test/**/*.test.ts\"",
+    "test": "node --experimental-strip-types --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "watch": "tsc -p . --watch",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,css}\"",
     "prepare": "git config --local core.hooksPath .githooks"
