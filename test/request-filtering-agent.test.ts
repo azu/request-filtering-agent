@@ -1,7 +1,8 @@
-import * as assert from "assert";
+import { describe, it, beforeEach, afterEach } from "node:test";
+import * as assert from "node:assert/strict";
 import fetch from "node-fetch";
-import { globalHttpAgent, RequestFilteringHttpAgent, useAgent } from "../src/request-filtering-agent";
-import * as http from "http";
+import { globalHttpAgent, RequestFilteringHttpAgent, useAgent } from "../src/request-filtering-agent.ts";
+import * as http from "node:http";
 
 const TEST_PORT = 12456;
 const IS_IPV6_SUPPORTED = true;
@@ -146,7 +147,7 @@ describe("request-filtering-agent", function () {
     // TODO: Travis CI does not support IPv6
     // https://docs.travis-ci.com/user/reference/overview/
     // https://github.com/travis-ci/travis-ci/issues/8891
-    (IS_IPV6_SUPPORTED ? it : it.skip)("IPv6: should not request because Socket is closed", async () => {
+    it("IPv6: should not request because Socket is closed", { skip: !IS_IPV6_SUPPORTED }, async () => {
         const privateIPs = [
             `http://[::1]:${TEST_PORT}`, // IPv6
             `http://[0:0:0:0:0:0:0:1]:${TEST_PORT}`, // IPv6 explicitly

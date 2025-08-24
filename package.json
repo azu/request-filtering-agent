@@ -1,7 +1,11 @@
 {
   "name": "request-filtering-agent",
   "version": "2.0.1",
+  "type": "module",
   "description": "An http(s).Agent implementation that block request Private IP address.",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "homepage": "https://github.com/azu/request-filtering-agent",
   "bugs": {
     "url": "https://github.com/azu/request-filtering-agent/issues"
@@ -27,6 +31,13 @@
   ],
   "main": "lib/request-filtering-agent.js",
   "types": "lib/request-filtering-agent.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/request-filtering-agent.d.ts",
+      "import": "./lib/request-filtering-agent.js",
+      "default": "./lib/request-filtering-agent.js"
+    }
+  },
   "directories": {
     "lib": "lib",
     "test": "test"
@@ -35,7 +46,8 @@
     "build": "tsc -p .",
     "clean": "rimraf lib/",
     "prepublish": "npm run --if-present build",
-    "test": "mocha \"test/**/*.ts\"",
+    "test": "tsx --test test/request-filtering-agent.test.ts",
+    "typecheck": "tsc --noEmit",
     "watch": "tsc -p . --watch",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,css}\"",
     "prepare": "git config --local core.hooksPath .githooks"
@@ -53,16 +65,13 @@
   },
   "devDependencies": {
     "@types/ip": "^1.1.2",
-    "@types/mocha": "^10.0.3",
     "@types/node": "^20.8.7",
     "@types/node-fetch": "^2.6.7",
     "lint-staged": "^15.0.2",
-    "mocha": "^10.2.0",
     "node-fetch": "^2.7.0",
     "prettier": "^3.0.3",
     "rimraf": "^5.0.5",
-    "ts-node": "^10.9.1",
-    "ts-node-test-register": "^10.0.0",
+    "tsx": "^4.20.5",
     "typescript": "^5.2.2"
   },
   "dependencies": {
