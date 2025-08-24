@@ -12,17 +12,20 @@ jobs:
         node_version: [ 20, 22 ]
 
     steps:
-    - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+    - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4 # v3.6.0
     - name: Use Node.js ${{ matrix.node_version }}
       uses: actions/setup-node@3235b876344d2a9aa001b8d1453c930bba69e610 # v3.9.1
       with:
         node-version: ${{ matrix.node_version }}
 
-    - name: yarn install
-      run: yarn install
+    - name: pnpm install
+      run: pnpm install
     
     - name: Typecheck
-      run: yarn typecheck
+      run: pnpm typecheck
     
     - name: Test
-      run: yarn test
+      run: pnpm test
