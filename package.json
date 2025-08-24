@@ -4,7 +4,7 @@
   "type": "module",
   "description": "An http(s).Agent implementation that block request Private IP address.",
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=20.0.0"
   },
   "homepage": "https://github.com/azu/request-filtering-agent",
   "bugs": {
@@ -39,7 +39,7 @@
     "build": "tsc -p .",
     "clean": "rimraf lib/",
     "prepublish": "npm run --if-present build",
-    "test": "node --experimental-strip-types --test \"test/**/*.test.ts\"",
+    "test": "tsx --test \"test/**/*.test.ts\"",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "watch": "tsc -p . --watch",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,css}\"",
@@ -64,6 +64,7 @@
     "node-fetch": "^2.7.0",
     "prettier": "^3.0.3",
     "rimraf": "^5.0.5",
+    "tsx": "^4.20.5",
     "typescript": "^5.2.2"
   },
   "dependencies": {
