@@ -1,9 +1,10 @@
 import * as net from "node:net";
-import type { TcpNetConnectOpts, Socket } from "node:net";
+import type { TcpNetConnectOpts } from "node:net";
 import * as http from "node:http";
 import * as https from "node:https";
 import ipaddr from "ipaddr.js";
 import * as dns from "node:dns";
+import type { Duplex } from "node:stream";
 
 export interface RequestFilteringAgentOptions {
     // Allow to connect private IP address if allowPrivateIPAddress is true
@@ -166,7 +167,7 @@ export class RequestFilteringHttpAgent extends http.Agent {
     // override http.Agent#createConnection
     // https://nodejs.org/api/http.html#http_agent_createconnection_options_callback
     // https://nodejs.org/api/net.html#net_net_createconnection_options_connectlistener
-    createConnection(options: TcpNetConnectOpts, connectionListener?: (error: Error | null, socket: Socket) => void) {
+    createConnection(options: TcpNetConnectOpts, connectionListener?: (error: Error | null, socket: Duplex) => void) {
         const { host } = options;
         if (host !== undefined) {
             // Direct ip address request without dns-lookup
@@ -178,7 +179,6 @@ export class RequestFilteringHttpAgent extends http.Agent {
             }
         }
         // https://nodejs.org/api/net.html#net_socket_connect_options_connectlistener
-        // @ts-expect-error - @types/node does not defined createConnection
         return super.createConnection(
             { ...options, lookup: makeLookup(options, this.requestFilterOptions) },
             connectionListener
@@ -207,7 +207,7 @@ export class RequestFilteringHttpsAgent extends https.Agent {
     // override http.Agent#createConnection
     // https://nodejs.org/api/http.html#http_agent_createconnection_options_callback
     // https://nodejs.org/api/net.html#net_net_createconnection_options_connectlistener
-    createConnection(options: TcpNetConnectOpts, connectionListener?: (error: Error | null, socket: Socket) => void) {
+    createConnection(options: TcpNetConnectOpts, connectionListener?: (error: Error | null, socket: Duplex) => void) {
         const { host } = options;
         if (host !== undefined) {
             // Direct ip address request without dns-lookup
@@ -219,7 +219,6 @@ export class RequestFilteringHttpsAgent extends https.Agent {
             }
         }
         // https://nodejs.org/api/net.html#net_socket_connect_options_connectlistener
-        // @ts-expect-error - @types/node does not defined createConnection
         return super.createConnection(
             { ...options, lookup: makeLookup(options, this.requestFilterOptions) },
             connectionListener
