@@ -1,6 +1,6 @@
 {
   "name": "request-filtering-agent",
-  "version": "2.0.1",
+  "version": "3.0.0",
   "type": "module",
   "description": "An http(s).Agent implementation that block request Private IP address.",
   "engines": {
