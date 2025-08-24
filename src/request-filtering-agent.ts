@@ -178,10 +178,9 @@ export class RequestFilteringHttpAgent extends http.Agent {
             }
         }
         // https://nodejs.org/api/net.html#net_socket_connect_options_connectlistener
-        // @ts-expect-error - @types/node does not defined createConnection
         return super.createConnection(
             { ...options, lookup: makeLookup(options, this.requestFilterOptions) },
-            connectionListener
+            connectionListener as any
         );
     }
 }
@@ -219,10 +218,9 @@ export class RequestFilteringHttpsAgent extends https.Agent {
             }
         }
         // https://nodejs.org/api/net.html#net_socket_connect_options_connectlistener
-        // @ts-expect-error - @types/node does not defined createConnection
         return super.createConnection(
             { ...options, lookup: makeLookup(options, this.requestFilterOptions) },
-            connectionListener
+            connectionListener as any
         );
     }
 }
