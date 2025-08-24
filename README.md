@@ -46,10 +46,10 @@ Install with [npm](https://www.npmjs.com/):
 
 ### Support Node.js version
 
-| Version | Node.js 12 | Node.js 14 | Node.js 16 | Node.js 18 | Node.js 20  |
+| Version | Node.js 12 | Node.js 14 | Node.js 16 | Node.js 18 | Node.js 20+ |
 | :------ | :--------- | :--------- | :--------- | :--------- | :---------- |
 | v1.x.x  | Support    | Support    | Support    | Support    | Not Support |
-| v2.0.0  | No Support | No Support | No Support | Support    | Support     |
+| v2.x.x  | No Support | No Support | No Support | No Support | Support     |
 
 ## Usage
 
