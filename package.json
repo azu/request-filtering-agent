@@ -31,6 +31,13 @@
   ],
   "main": "lib/request-filtering-agent.js",
   "types": "lib/request-filtering-agent.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/request-filtering-agent.d.ts",
+      "import": "./lib/request-filtering-agent.js",
+      "default": "./lib/request-filtering-agent.js"
+    }
+  },
   "directories": {
     "lib": "lib",
     "test": "test"
