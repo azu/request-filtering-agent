@@ -38,7 +38,7 @@ jobs:
       - name: Version bump
         id: version
         run: |
-          pnpm version "$VERSION_TYPE" --no-git-tag-version
+          npm version "$VERSION_TYPE" --no-git-tag-version
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
         env:

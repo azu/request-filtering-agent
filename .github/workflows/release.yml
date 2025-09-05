@@ -83,11 +83,11 @@ jobs:
       
       - name: Build package
         if: steps.tag-check.outputs.exists == 'false'
-        run: pnpm run build || true
+        run: pnpm run build
       
       - name: Publish to npm with provenance
         if: steps.tag-check.outputs.exists == 'false'
-        run: pnpm publish --provenance --access public
+        run: ppm publish --provenance --access public
       
       - name: Create GitHub Release with tag
         id: create-release
