@@ -98,6 +98,9 @@ jobs:
           title: "Release v${{ steps.version.outputs.version }}"
           body-path: release-notes.md
           commit-message: "chore: release v${{ steps.version.outputs.version }}"
+          add-paths: |
+            package.json
+            pnpm-lock.yaml
           labels: |
             Type: Release
           assignees: ${{ github.actor }}
