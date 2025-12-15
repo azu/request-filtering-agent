@@ -156,7 +156,10 @@ describe("request-filtering-agent", function () {
         }
         assert.strictEqual(consoleMock.mock.calls.length, 1);
         const error = consoleMock.mock.calls[0].arguments[0] as Error;
-        assert.strictEqual(error.message, "[request-filtering-agent] Invalid CIDR in allowIPAddressList: 127.0.0.0/invalid");
+        assert.strictEqual(
+            error.message,
+            "[request-filtering-agent] Invalid CIDR in allowIPAddressList: 127.0.0.0/invalid"
+        );
         assert.ok(error.cause);
     });
     it("IPv4: should not request because it is private IP", async () => {
@@ -252,7 +255,7 @@ describe("request-filtering-agent", function () {
             try {
                 await fetch(ipAddress, {
                     agent: useAgent(ipAddress),
-                    timeout: 10000
+                    timeout: 10_000
                 });
                 throw new ReferenceError("SHOULD NOT BE CALLED");
             } catch (error: any) {
@@ -295,7 +298,7 @@ describe("request-filtering-agent", function () {
         try {
             await fetch("http://example.com", {
                 agent: globalHttpAgent,
-                timeout: 2000
+                timeout: 10_000
             });
         } catch (error) {
             assert.fail(new Error("should fetch public ip, but it is failed"));
