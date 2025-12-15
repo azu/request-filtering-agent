@@ -52,11 +52,29 @@ const validateIPAddress = (
     }
     try {
         const addr = ipaddr.parse(address);
-        const range = addr.range();
         // prefer allowed list
-        if (options.allowIPAddressList.length > 0 && options.allowIPAddressList.includes(address)) {
-            return;
+        if (options.allowIPAddressList.length > 0) {
+            for (const allowed of options.allowIPAddressList) {
+                // if allowed is a single IP address
+                if (net.isIP(allowed) !== 0) {
+                    if (allowed === address) {
+                        return; // It is allowed
+                    }
+                } else {
+                    // if allowed is a CIDR
+                    try {
+                        const cidr = ipaddr.parseCIDR(allowed);
+                        if (addr.match(cidr)) {
+                            return; // It is allowed
+                        }
+                    } catch (e) {
+                        // not a valid CIDR, show warning
+                        console.warn(new Error(`[request-filtering-agent] Invalid CIDR in allowIPAddressList: ${allowed}`, { cause: e }));
+                    }
+                }
+            }
         }
+        const range = addr.range();
         if (!options.allowMetaIPAddress) {
             // address === "0.0.0.0" || address == "::"
             if (range === "unspecified") {
