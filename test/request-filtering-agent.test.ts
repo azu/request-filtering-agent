@@ -162,6 +162,51 @@ describe("request-filtering-agent", function () {
         );
         assert.ok(error.cause);
     });
+    it("should deny CIDR range in denyIPAddressList", async () => {
+        const agent = new RequestFilteringHttpAgent({
+            allowPrivateIPAddress: true,
+            denyIPAddressList: ["127.0.0.0/8"]
+        });
+        const deniedIPs = [`http://127.0.0.1:${TEST_PORT}`, `http://127.0.0.2:${TEST_PORT}`];
+        for (const ipAddress of deniedIPs) {
+            try {
+                await fetch(ipAddress, {
+                    agent,
+                    timeout: 2000
+                });
+                throw new ReferenceError("SHOULD NOT BE CALLED");
+            } catch (error) {
+                if (error instanceof ReferenceError) {
+                    assert.fail(error);
+                }
+            }
+        }
+    });
+    it("should log a warning for invalid CIDR in denyIPAddressList", async (t) => {
+        const agent = new RequestFilteringHttpAgent({
+            allowPrivateIPAddress: true,
+            denyIPAddressList: ["127.0.0.0/invalid"]
+        });
+        const privateIPs = [`http://127.0.0.1:${TEST_PORT}`];
+        const consoleMock = t.mock.method(console, "warn");
+        for (const ipAddress of privateIPs) {
+            try {
+                await fetch(ipAddress, {
+                    agent,
+                    timeout: 2000
+                });
+            } catch (error) {
+                // Should still connect since the CIDR is invalid
+            }
+        }
+        assert.strictEqual(consoleMock.mock.calls.length, 1);
+        const error = consoleMock.mock.calls[0].arguments[0] as Error;
+        assert.strictEqual(
+            error.message,
+            "[request-filtering-agent] Invalid CIDR in denyIPAddressList: 127.0.0.0/invalid"
+        );
+        assert.ok(error.cause);
+    });
     it("IPv4: should not request because it is private IP", async () => {
         const privateIPs = [
             `http://127.0.0.1:${TEST_PORT}`, //
