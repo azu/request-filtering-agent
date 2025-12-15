@@ -35,6 +35,52 @@ export const DefaultRequestFilteringAgentOptions: Required<RequestFilteringAgent
     allowIPAddressList: [],
     denyIPAddressList: []
 };
+
+/**
+ * Check if an IP address matches an IP or CIDR in the list
+ * @param params.targetAddress Target IP address to check (both string and parsed forms)
+ * @param params.ipAddressList List of IPs or CIDRs to match against (allowIPAddressList or denyIPAddressList)
+ * @param params.listName Name of the list (for warning messages)
+ * @returns true if the target address matches any IP or CIDR in the list
+ */
+const matchIPAddress = ({
+    targetAddress,
+    ipAddressList,
+    listName
+}: {
+    targetAddress: {
+        raw: string;
+        parsed: ipaddr.IPv4 | ipaddr.IPv6;
+    };
+    ipAddressList: string[];
+    listName: string;
+}): boolean => {
+    for (const ipOrCIDR of ipAddressList) {
+        // if ipOrCIDR is a single IP address
+        if (net.isIP(ipOrCIDR) !== 0) {
+            if (ipOrCIDR === targetAddress.raw) {
+                return true;
+            }
+        } else {
+            // if ipOrCIDR is a CIDR
+            try {
+                const cidr = ipaddr.parseCIDR(ipOrCIDR);
+                if (targetAddress.parsed.match(cidr)) {
+                    return true;
+                }
+            } catch (e) {
+                // not a valid CIDR, show warning
+                // TODO: Throw an exception in a future major update instead of just warning
+                // This is a programming error and should be treated as such
+                console.warn(
+                    new Error(`[request-filtering-agent] Invalid CIDR in ${listName}: ${ipOrCIDR}`, { cause: e })
+                );
+            }
+        }
+    }
+    return false;
+};
+
 /**
  * validate the address that is matched the validation options
  * @param address ip address
@@ -51,30 +97,23 @@ const validateIPAddress = (
         return;
     }
     try {
-        const addr = ipaddr.parse(address);
+        const parsedAddr = ipaddr.parse(address);
         // prefer allowed list
         if (options.allowIPAddressList.length > 0) {
-            for (const allowed of options.allowIPAddressList) {
-                // if allowed is a single IP address
-                if (net.isIP(allowed) !== 0) {
-                    if (allowed === address) {
-                        return; // It is allowed
-                    }
-                } else {
-                    // if allowed is a CIDR
-                    try {
-                        const cidr = ipaddr.parseCIDR(allowed);
-                        if (addr.match(cidr)) {
-                            return; // It is allowed
-                        }
-                    } catch (e) {
-                        // not a valid CIDR, show warning
-                        console.warn(new Error(`[request-filtering-agent] Invalid CIDR in allowIPAddressList: ${allowed}`, { cause: e }));
-                    }
-                }
+            if (
+                matchIPAddress({
+                    targetAddress: {
+                        raw: address,
+                        parsed: parsedAddr
+                    },
+                    ipAddressList: options.allowIPAddressList,
+                    listName: "allowIPAddressList"
+                })
+            ) {
+                return; // It is allowed
             }
         }
-        const range = addr.range();
+        const range = parsedAddr.range();
         if (!options.allowMetaIPAddress) {
             // address === "0.0.0.0" || address == "::"
             if (range === "unspecified") {
@@ -90,10 +129,21 @@ const validateIPAddress = (
             );
         }
 
-        if (options.denyIPAddressList.length > 0 && options.denyIPAddressList.includes(address)) {
-            return new Error(
-                `DNS lookup ${address}(family:${family}, host:${host}) is not allowed. Because It is defined in denyIPAddressList.`
-            );
+        if (options.denyIPAddressList.length > 0) {
+            if (
+                matchIPAddress({
+                    targetAddress: {
+                        raw: address,
+                        parsed: parsedAddr
+                    },
+                    ipAddressList: options.denyIPAddressList,
+                    listName: "denyIPAddressList"
+                })
+            ) {
+                return new Error(
+                    `DNS lookup ${address}(family:${family}, host:${host}) is not allowed. Because It is defined in denyIPAddressList.`
+                );
+            }
         }
     } catch (error) {
         return error as Error; // if can not parse IP address, throw error
