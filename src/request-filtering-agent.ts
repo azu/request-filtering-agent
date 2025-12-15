@@ -38,18 +38,23 @@ export const DefaultRequestFilteringAgentOptions: Required<RequestFilteringAgent
 
 /**
  * Check if an IP address matches an IP or CIDR in the list
- * @param address IP address string
- * @param addr Parsed IP address object
- * @param ipList List of IPs or CIDRs
- * @param listName Name of the list (for warning messages)
+ * @param params.address IP address string
+ * @param params.addr Parsed IP address object
+ * @param params.ipList List of IPs or CIDRs
+ * @param params.listName Name of the list (for warning messages)
  * @returns true if the address matches any IP or CIDR in the list
  */
-const matchIPAddress = (
-    address: string,
-    addr: ipaddr.IPv4 | ipaddr.IPv6,
-    ipList: string[],
-    listName: string
-): boolean => {
+const matchIPAddress = ({
+    address,
+    addr,
+    ipList,
+    listName
+}: {
+    address: string;
+    addr: ipaddr.IPv4 | ipaddr.IPv6;
+    ipList: string[];
+    listName: string;
+}): boolean => {
     for (const ipOrCIDR of ipList) {
         // if ipOrCIDR is a single IP address
         if (net.isIP(ipOrCIDR) !== 0) {
@@ -95,7 +100,14 @@ const validateIPAddress = (
         const addr = ipaddr.parse(address);
         // prefer allowed list
         if (options.allowIPAddressList.length > 0) {
-            if (matchIPAddress(address, addr, options.allowIPAddressList, "allowIPAddressList")) {
+            if (
+                matchIPAddress({
+                    address,
+                    addr,
+                    ipList: options.allowIPAddressList,
+                    listName: "allowIPAddressList"
+                })
+            ) {
                 return; // It is allowed
             }
         }
@@ -116,7 +128,14 @@ const validateIPAddress = (
         }
 
         if (options.denyIPAddressList.length > 0) {
-            if (matchIPAddress(address, addr, options.denyIPAddressList, "denyIPAddressList")) {
+            if (
+                matchIPAddress({
+                    address,
+                    addr,
+                    ipList: options.denyIPAddressList,
+                    listName: "denyIPAddressList"
+                })
+            ) {
                 return new Error(
                     `DNS lookup ${address}(family:${family}, host:${host}) is not allowed. Because It is defined in denyIPAddressList.`
                 );
