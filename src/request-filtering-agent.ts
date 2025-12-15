@@ -38,34 +38,34 @@ export const DefaultRequestFilteringAgentOptions: Required<RequestFilteringAgent
 
 /**
  * Check if an IP address matches an IP or CIDR in the list
- * @param params.address IP address string
- * @param params.addr Parsed IP address object
- * @param params.ipList List of IPs or CIDRs
+ * @param params.targetAddress Target IP address string to check
+ * @param params.parsedTarget Parsed target IP address object
+ * @param params.ipList List of IPs or CIDRs to match against
  * @param params.listName Name of the list (for warning messages)
- * @returns true if the address matches any IP or CIDR in the list
+ * @returns true if the target address matches any IP or CIDR in the list
  */
 const matchIPAddress = ({
-    address,
-    addr,
+    targetAddress,
+    parsedTarget,
     ipList,
     listName
 }: {
-    address: string;
-    addr: ipaddr.IPv4 | ipaddr.IPv6;
+    targetAddress: string;
+    parsedTarget: ipaddr.IPv4 | ipaddr.IPv6;
     ipList: string[];
     listName: string;
 }): boolean => {
     for (const ipOrCIDR of ipList) {
         // if ipOrCIDR is a single IP address
         if (net.isIP(ipOrCIDR) !== 0) {
-            if (ipOrCIDR === address) {
+            if (ipOrCIDR === targetAddress) {
                 return true;
             }
         } else {
             // if ipOrCIDR is a CIDR
             try {
                 const cidr = ipaddr.parseCIDR(ipOrCIDR);
-                if (addr.match(cidr)) {
+                if (parsedTarget.match(cidr)) {
                     return true;
                 }
             } catch (e) {
@@ -97,13 +97,13 @@ const validateIPAddress = (
         return;
     }
     try {
-        const addr = ipaddr.parse(address);
+        const parsedAddr = ipaddr.parse(address);
         // prefer allowed list
         if (options.allowIPAddressList.length > 0) {
             if (
                 matchIPAddress({
-                    address,
-                    addr,
+                    targetAddress: address,
+                    parsedTarget: parsedAddr,
                     ipList: options.allowIPAddressList,
                     listName: "allowIPAddressList"
                 })
@@ -111,7 +111,7 @@ const validateIPAddress = (
                 return; // It is allowed
             }
         }
-        const range = addr.range();
+        const range = parsedAddr.range();
         if (!options.allowMetaIPAddress) {
             // address === "0.0.0.0" || address == "::"
             if (range === "unspecified") {
@@ -130,8 +130,8 @@ const validateIPAddress = (
         if (options.denyIPAddressList.length > 0) {
             if (
                 matchIPAddress({
-                    address,
-                    addr,
+                    targetAddress: address,
+                    parsedTarget: parsedAddr,
                     ipList: options.denyIPAddressList,
                     listName: "denyIPAddressList"
                 })
