@@ -105,7 +105,7 @@ describe("request-filtering-agent", function () {
     });
     it("should allow CIDR range in allowIPAddressList", async () => {
         const agent = new RequestFilteringHttpAgent({
-            allowIPAddressList: ["127.0.0.0/8"],
+            allowIPAddressList: ["127.0.0.0/8", "::1"],
             allowPrivateIPAddress: false
         });
         const privateIPs = [`http://127.0.0.1:${TEST_PORT}`, `http://localhost:${TEST_PORT}`];
