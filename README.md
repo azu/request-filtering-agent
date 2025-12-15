@@ -115,6 +115,7 @@ export interface RequestFilteringAgentOptions {
     // Default: false
     allowMetaIPAddress?: boolean;
     // Allow address list
+    // It supports CIDR notation.
     // This values are preferred than denyAddressList
     // Default: []
     allowIPAddressList?: string[];
@@ -161,6 +162,17 @@ const agent = new RequestFilteringHttpAgent({
 const url = 'http://127.0.0.1:8080/';
 fetch(url, {
     agent: agent
+}).then(res => {
+    console.log(res); // OK
+});
+
+// Allow requests to a specific CIDR range
+const agentWithCIDR = new RequestFilteringHttpAgent({
+    allowIPAddressList: ["192.168.1.0/24"],
+});
+const urlInCIDR = 'http://192.168.1.1:8080/';
+fetch(urlInCIDR, {
+    agent: agentWithCIDR
 }).then(res => {
     console.log(res); // OK
 });

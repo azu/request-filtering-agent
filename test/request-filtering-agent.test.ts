@@ -103,6 +103,60 @@ describe("request-filtering-agent", function () {
             }
         }
     });
+    it("should allow CIDR range in allowIPAddressList", async () => {
+        const agent = new RequestFilteringHttpAgent({
+            allowIPAddressList: ["127.0.0.0/8"],
+            allowPrivateIPAddress: false
+        });
+        const privateIPs = [`http://127.0.0.1:${TEST_PORT}`, `http://localhost:${TEST_PORT}`];
+        for (const ipAddress of privateIPs) {
+            try {
+                await fetch(ipAddress, {
+                    agent,
+                    timeout: 2000
+                });
+            } catch (error) {
+                assert.fail(new Error("should fetch, because it is allow, error" + error));
+            }
+        }
+        const disAllowedPrivateIPs = [`http://169.254.169.254:${TEST_PORT}`];
+        for (const ipAddress of disAllowedPrivateIPs) {
+            try {
+                await fetch(ipAddress, {
+                    agent,
+                    timeout: 2000
+                });
+                throw new ReferenceError("SHOULD NOT BE CALLED");
+            } catch (error) {
+                if (error instanceof ReferenceError) {
+                    assert.fail(error);
+                }
+            }
+        }
+    });
+    it("should log a warning for invalid CIDR in allowIPAddressList", async (t) => {
+        const agent = new RequestFilteringHttpAgent({
+            allowIPAddressList: ["127.0.0.0/invalid"],
+            allowPrivateIPAddress: false
+        });
+        const privateIPs = [`http://127.0.0.1:${TEST_PORT}`];
+        const consoleMock = t.mock.method(console, "warn");
+        for (const ipAddress of privateIPs) {
+            try {
+                await fetch(ipAddress, {
+                    agent,
+                    timeout: 2000
+                });
+                throw new ReferenceError("SHOULD NOT BE CALLED");
+            } catch (error) {
+                if (error instanceof ReferenceError) {
+                    assert.fail(error);
+                }
+            }
+        }
+        assert.strictEqual(consoleMock.mock.calls.length, 1);
+        assert.strictEqual(consoleMock.mock.calls[0].arguments[0], "[request-filtering-agent] Invalid CIDR in allowIPAddressList: 127.0.0.0/invalid");
+    });
     it("IPv4: should not request because it is private IP", async () => {
         const privateIPs = [
             `http://127.0.0.1:${TEST_PORT}`, //
