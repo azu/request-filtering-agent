@@ -155,7 +155,9 @@ describe("request-filtering-agent", function () {
             }
         }
         assert.strictEqual(consoleMock.mock.calls.length, 1);
-        assert.strictEqual(consoleMock.mock.calls[0].arguments[0], "[request-filtering-agent] Invalid CIDR in allowIPAddressList: 127.0.0.0/invalid");
+        const error = consoleMock.mock.calls[0].arguments[0] as Error;
+        assert.strictEqual(error.message, "[request-filtering-agent] Invalid CIDR in allowIPAddressList: 127.0.0.0/invalid");
+        assert.ok(error.cause);
     });
     it("IPv4: should not request because it is private IP", async () => {
         const privateIPs = [

@@ -69,7 +69,7 @@ const validateIPAddress = (
                         }
                     } catch (e) {
                         // not a valid CIDR, show warning
-                        console.warn(`[request-filtering-agent] Invalid CIDR in allowIPAddressList: ${allowed}`);
+                        console.warn(new Error(`[request-filtering-agent] Invalid CIDR in allowIPAddressList: ${allowed}`, { cause: e }));
                     }
                 }
             }
