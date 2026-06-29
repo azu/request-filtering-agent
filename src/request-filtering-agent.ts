@@ -204,6 +204,19 @@ const makeLookup = (
     };
 };
 
+const createConnectionErrorSocket = (
+    error: Error,
+    connectionListener?: (error: Error | null, socket: Duplex) => void
+): net.Socket => {
+    const socket = new net.Socket();
+    if (connectionListener) {
+        connectionListener(error, socket);
+    } else {
+        socket.destroy(error);
+    }
+    return socket;
+};
+
 /**
  * A subclass of http.Agent with request filtering
  */
@@ -243,7 +256,7 @@ export class RequestFilteringHttpAgent extends http.Agent {
             // https://nodejs.org/api/net.html#net_socket_connect_options_connectlistener
             const validationError = validateIPAddress({ address: host }, this.requestFilterOptions);
             if (validationError) {
-                throw validationError;
+                return createConnectionErrorSocket(validationError, connectionListener);
             }
         }
         // https://nodejs.org/api/net.html#net_socket_connect_options_connectlistener
@@ -283,7 +296,7 @@ export class RequestFilteringHttpsAgent extends https.Agent {
             // https://nodejs.org/api/net.html#net_socket_connect_options_connectlistener
             const validationError = validateIPAddress({ address: host }, this.requestFilterOptions);
             if (validationError) {
-                throw validationError;
+                return createConnectionErrorSocket(validationError, connectionListener);
             }
         }
         // https://nodejs.org/api/net.html#net_socket_connect_options_connectlistener

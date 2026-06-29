@@ -1,8 +1,14 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import * as assert from "node:assert/strict";
 import fetch from "node-fetch";
-import { globalHttpAgent, RequestFilteringHttpAgent, useAgent } from "../src/request-filtering-agent.ts";
+import {
+    globalHttpAgent,
+    RequestFilteringHttpAgent,
+    RequestFilteringHttpsAgent,
+    useAgent
+} from "../src/request-filtering-agent.ts";
 import * as http from "node:http";
+import * as https from "node:https";
 
 const TEST_PORT = 12456;
 const IS_IPV6_SUPPORTED = true;
@@ -227,6 +233,60 @@ describe("request-filtering-agent", function () {
                 assert.match(error.message, /It is private IP address/);
             }
         }
+    });
+    it("IPv4: should emit request error for literal private IP instead of throwing synchronously", async () => {
+        const agent = new RequestFilteringHttpAgent();
+        await new Promise<void>((resolve, reject) => {
+            let req: http.ClientRequest;
+            try {
+                req = http.get({
+                    hostname: "169.254.169.254",
+                    port: 80,
+                    agent
+                });
+            } catch (error) {
+                reject(error);
+                return;
+            }
+            req.on("error", (error) => {
+                try {
+                    assert.match(error.message, /It is private IP address/);
+                    resolve();
+                } catch (assertionError) {
+                    reject(assertionError);
+                }
+            });
+            req.on("response", () => {
+                reject(new Error("SHOULD NOT BE CALLED"));
+            });
+        });
+    });
+    it("HTTPS IPv4: should emit request error for literal private IP instead of throwing synchronously", async () => {
+        const agent = new RequestFilteringHttpsAgent();
+        await new Promise<void>((resolve, reject) => {
+            let req: http.ClientRequest;
+            try {
+                req = https.get({
+                    hostname: "169.254.169.254",
+                    port: 443,
+                    agent
+                });
+            } catch (error) {
+                reject(error);
+                return;
+            }
+            req.on("error", (error) => {
+                try {
+                    assert.match(error.message, /It is private IP address/);
+                    resolve();
+                } catch (assertionError) {
+                    reject(assertionError);
+                }
+            });
+            req.on("response", () => {
+                reject(new Error("SHOULD NOT BE CALLED"));
+            });
+        });
     });
     it("IPv4: should not request because it is meta/unspecified IP", async () => {
         const privateIPs = [
