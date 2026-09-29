@@ -37,30 +37,8 @@ export const DefaultRequestFilteringAgentOptions: Required<RequestFilteringAgent
 };
 
 /**
- * Parse an IP address and normalize IPv4-mapped IPv6 address to IPv4 address
- * e.g. "::ffff:127.0.0.1" and "::ffff:7f00:1" are normalized to "127.0.0.1"
- * The OS connects to the embedded IPv4 address, so it should be validated as IPv4 address.
- */
-const parseIPAddress = (address: string): ipaddr.IPv4 | ipaddr.IPv6 => {
-    return ipaddr.process(address);
-};
-
-/**
- * Parse a CIDR and normalize IPv4-mapped IPv6 CIDR to IPv4 CIDR
- * e.g. "::ffff:127.0.0.0/104" is normalized to "127.0.0.0/8"
- * Other IPv6 CIDR like "::/0" is not normalized, so it does not match any IPv4 address.
- */
-const parseCIDR = (cidr: string): [ipaddr.IPv4 | ipaddr.IPv6, number] => {
-    const [range, prefixLength] = ipaddr.parseCIDR(cidr);
-    if (range.kind() === "ipv6" && prefixLength >= 96 && (range as ipaddr.IPv6).isIPv4MappedAddress()) {
-        return [(range as ipaddr.IPv6).toIPv4Address(), prefixLength - 96];
-    }
-    return [range, prefixLength];
-};
-
-/**
  * Check if an IP address matches an IP or CIDR in the list
- * @param params.targetAddress Target IP address to check (normalized by parseIPAddress)
+ * @param params.targetAddress Target IP address to check (both string and parsed forms)
  * @param params.ipAddressList List of IPs or CIDRs to match against (allowIPAddressList or denyIPAddressList)
  * @param params.listName Name of the list (for warning messages)
  * @returns true if the target address matches any IP or CIDR in the list
@@ -70,24 +48,26 @@ const matchIPAddress = ({
     ipAddressList,
     listName
 }: {
-    targetAddress: ipaddr.IPv4 | ipaddr.IPv6;
+    targetAddress: {
+        raw: string;
+        parsed: ipaddr.IPv4 | ipaddr.IPv6;
+    };
     ipAddressList: string[];
     listName: string;
 }): boolean => {
     for (const ipOrCIDR of ipAddressList) {
         // if ipOrCIDR is a single IP address
         if (net.isIP(ipOrCIDR) !== 0) {
-            // compare normalized address instead of raw string
-            // e.g. "::1" and "0:0:0:0:0:0:0:1", "127.0.0.1" and "::ffff:127.0.0.1"
-            const ip = parseIPAddress(ipOrCIDR);
-            if (ip.kind() === targetAddress.kind() && ip.toNormalizedString() === targetAddress.toNormalizedString()) {
+            if (ipOrCIDR === targetAddress.raw) {
                 return true;
             }
         } else {
             // if ipOrCIDR is a CIDR
-            let cidr: [ipaddr.IPv4 | ipaddr.IPv6, number];
             try {
-                cidr = parseCIDR(ipOrCIDR);
+                const cidr = ipaddr.parseCIDR(ipOrCIDR);
+                if (targetAddress.parsed.match(cidr)) {
+                    return true;
+                }
             } catch (e) {
                 // not a valid CIDR, show warning
                 // TODO: Throw an exception in a future major update instead of just warning
@@ -95,12 +75,6 @@ const matchIPAddress = ({
                 console.warn(
                     new Error(`[request-filtering-agent] Invalid CIDR in ${listName}: ${ipOrCIDR}`, { cause: e })
                 );
-                continue;
-            }
-            // different address family never matches
-            // IPv4-mapped IPv6 address and CIDR are already normalized to IPv4
-            if (targetAddress.kind() === cidr[0].kind() && targetAddress.match(cidr)) {
-                return true;
             }
         }
     }
@@ -123,13 +97,15 @@ const validateIPAddress = (
         return;
     }
     try {
-        // normalize IPv4-mapped IPv6 address to IPv4 address before validation
-        const parsedAddr = parseIPAddress(address);
+        const parsedAddr = ipaddr.parse(address);
         // prefer allowed list
         if (options.allowIPAddressList.length > 0) {
             if (
                 matchIPAddress({
-                    targetAddress: parsedAddr,
+                    targetAddress: {
+                        raw: address,
+                        parsed: parsedAddr
+                    },
                     ipAddressList: options.allowIPAddressList,
                     listName: "allowIPAddressList"
                 })
@@ -156,7 +132,10 @@ const validateIPAddress = (
         if (options.denyIPAddressList.length > 0) {
             if (
                 matchIPAddress({
-                    targetAddress: parsedAddr,
+                    targetAddress: {
+                        raw: address,
+                        parsed: parsedAddr
+                    },
                     ipAddressList: options.denyIPAddressList,
                     listName: "denyIPAddressList"
                 })

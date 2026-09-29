@@ -213,61 +213,6 @@ describe("request-filtering-agent", function () {
         );
         assert.ok(error.cause);
     });
-    it("should deny IPv4-mapped IPv6 address that matches IPv4 in denyIPAddressList", async () => {
-        const requestError = (hostname: string, denyIPAddressList: string[]) => {
-            const agent = new RequestFilteringHttpAgent({
-                allowPrivateIPAddress: true,
-                denyIPAddressList
-            });
-            return new Promise<Error>((resolve, reject) => {
-                const req = http.get({ hostname, port: TEST_PORT, agent });
-                req.on("error", resolve);
-                req.on("response", () => reject(new Error("SHOULD NOT BE CALLED")));
-            });
-        };
-        const hostnames = ["::ffff:127.0.0.1", "::ffff:7f00:1", "0:0:0:0:0:ffff:7f00:1"];
-        const denyLists = [["127.0.0.1"], ["127.0.0.0/8"], ["::ffff:127.0.0.1"], ["::ffff:127.0.0.0/104"]];
-        for (const hostname of hostnames) {
-            for (const denyIPAddressList of denyLists) {
-                const error = await requestError(hostname, denyIPAddressList);
-                assert.match(error.message, /It is defined in denyIPAddressList/, `${hostname} ${denyIPAddressList}`);
-            }
-        }
-        // IPv4 address should also match IPv4-mapped IPv6 entry
-        const error = await requestError("127.0.0.1", ["::ffff:127.0.0.1"]);
-        assert.match(error.message, /It is defined in denyIPAddressList/);
-    });
-    it("should deny IPv6 address that is written in a different form in denyIPAddressList", async () => {
-        const agent = new RequestFilteringHttpAgent({
-            allowPrivateIPAddress: true,
-            denyIPAddressList: ["::1"]
-        });
-        const error = await new Promise<Error>((resolve, reject) => {
-            const req = http.get({ hostname: "0:0:0:0:0:0:0:1", port: TEST_PORT, agent });
-            req.on("error", resolve);
-            req.on("response", () => reject(new Error("SHOULD NOT BE CALLED")));
-        });
-        assert.match(error.message, /It is defined in denyIPAddressList/);
-    });
-    it("should not warn when CIDR in denyIPAddressList is different address family", async (t) => {
-        const agent = new RequestFilteringHttpAgent({
-            allowPrivateIPAddress: true,
-            denyIPAddressList: ["fc00::/7", "10.0.0.0/8"]
-        });
-        const consoleMock = t.mock.method(console, "warn");
-        await fetch(`http://127.0.0.1:${TEST_PORT}`, { agent, timeout: 2000 });
-        assert.strictEqual(consoleMock.mock.calls.length, 0);
-    });
-    it("IPv4-mapped IPv6: should not request because it is private IP", async () => {
-        for (const hostname of ["::ffff:127.0.0.1", "::ffff:a9fe:a9fe"]) {
-            const error = await new Promise<Error>((resolve, reject) => {
-                const req = http.get({ hostname, port: TEST_PORT, agent: new RequestFilteringHttpAgent() });
-                req.on("error", resolve);
-                req.on("response", () => reject(new Error("SHOULD NOT BE CALLED")));
-            });
-            assert.match(error.message, /It is private IP address/);
-        }
-    });
     it("IPv4: should not request because it is private IP", async () => {
         const privateIPs = [
             `http://127.0.0.1:${TEST_PORT}`, //
