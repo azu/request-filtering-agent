@@ -179,20 +179,6 @@ fetch(urlInCIDR, {
 }).then(res => {
     console.log(res); // OK
 });
-
-// Deny requests to a specific CIDR range
-// Note: denyIPAddressList with allowPrivateIPAddress: true is not a security boundary
-// See "Security considerations for denyIPAddressList" section
-const agentWithDenyCIDR = new RequestFilteringHttpAgent({
-    allowPrivateIPAddress: true,
-    denyIPAddressList: ["192.168.1.0/24"],
-});
-const urlInDenyCIDR = 'http://192.168.1.1:8080/';
-fetch(urlInDenyCIDR, {
-    agent: agentWithDenyCIDR
-}).catch(err => {
-    console.err(err); // DNS lookup 192.168.1.1(family:4, host:192.168.1.1) is not allowed. Because It is defined in denyIPAddressList.
-});
 ```
 
 ### Security considerations for `denyIPAddressList`
