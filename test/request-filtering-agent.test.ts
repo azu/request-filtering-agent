@@ -9,6 +9,7 @@ import {
 } from "../src/request-filtering-agent.ts";
 import * as http from "node:http";
 import * as https from "node:https";
+import * as net from "node:net";
 
 const TEST_PORT = 12456;
 const IS_IPV6_SUPPORTED = true;
@@ -292,6 +293,20 @@ describe("request-filtering-agent", function () {
                 message: /It is private IP address/
             });
             assert.strictEqual(called, false);
+        });
+        it("should support CIDR with net.BlockList in filter", async () => {
+            const allowList = new net.BlockList();
+            allowList.addSubnet("127.0.0.0", 8, "ipv4");
+            const agent = new RequestFilteringHttpAgent({
+                allowPrivateIPAddress: true,
+                filter: (address, { family, range }) =>
+                    range === "unicast" || allowList.check(address, family === 4 ? "ipv4" : "ipv6")
+            });
+            const res = await fetch(`http://127.0.0.2:${TEST_PORT}`, { agent, timeout: 2000 });
+            assert.strictEqual(res.status, 200);
+            await assert.rejects(fetch(`http://169.254.169.254:${TEST_PORT}`, { agent, timeout: 2000 }), {
+                message: /Because It is rejected by filter/
+            });
         });
         it("should apply filter to the https agent", async () => {
             const agent = new RequestFilteringHttpsAgent({

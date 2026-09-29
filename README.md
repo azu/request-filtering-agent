@@ -195,6 +195,37 @@ fetch(url, {
 });
 ```
 
+### Example: Use CIDR in `filter` function
+
+`filter` does not provide CIDR matching.
+You can use Node.js built-in [`net.BlockList`](https://nodejs.org/api/net.html#class-netblocklist) to match CIDR ranges.
+
+```js
+const net = require("node:net");
+const fetch = require("node-fetch");
+const { RequestFilteringHttpAgent } = require("request-filtering-agent");
+
+// Migration from `allowIPAddressList: ["192.168.1.0/24"]`
+const allowList = new net.BlockList();
+allowList.addSubnet("192.168.1.0", 24, "ipv4");
+const allowAgent = new RequestFilteringHttpAgent({
+    allowPrivateIPAddress: true,
+    filter: (address, { family, range }) => {
+        return range === "unicast" || allowList.check(address, family === 4 ? "ipv4" : "ipv6");
+    }
+});
+
+// Migration from `allowPrivateIPAddress: true, denyIPAddressList: ["192.168.1.0/24"]`
+const denyList = new net.BlockList();
+denyList.addSubnet("192.168.1.0", 24, "ipv4");
+const denyAgent = new RequestFilteringHttpAgent({
+    allowPrivateIPAddress: true,
+    filter: (address, { family }) => {
+        return !denyList.check(address, family === 4 ? "ipv4" : "ipv6");
+    }
+});
+```
+
 ### Example: Create an Agent with options
 
 :warning: `allowIPAddressList` and `denyIPAddressList` are deprecated. Use `filter` instead.
