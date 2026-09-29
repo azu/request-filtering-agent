@@ -183,16 +183,22 @@ fetch(urlInCIDR, {
 
 ### Security considerations for `denyIPAddressList`
 
-`denyIPAddressList` compares the IP address as it is.
-This library does not normalize the address, so the same destination can be written in another form that does not match the list.
+`denyIPAddressList` is not a security boundary when `allowPrivateIPAddress` is `true`.
+The same IP address can be written in many forms, so it is hard to deny a destination as you intended.
 
-- IPv4-mapped IPv6 address: `::ffff:169.254.169.254` and `::ffff:a9fe:a9fe` connect to `169.254.169.254`, but they do not match `169.254.169.254` or `169.254.0.0/16`
-- Another IPv6 notation: `0:0:0:0:0:0:0:1` does not match `::1`
+For example, `denyIPAddressList: ["169.254.169.254"]` does not block the following addresses, because they are written in another form.
+A single IP address in the list is compared as a string, and this library does not normalize the address.
 
+```js
+// All of them connect to 169.254.169.254, but they do not match "169.254.169.254" or "169.254.0.0/16"
+"::ffff:169.254.169.254"
+"::ffff:a9fe:a9fe"
+"0:0:0:0:0:ffff:a9fe:a9fe"
+```
+
+To deny the destination with `denyIPAddressList`, you need to list every form of the address, and it is easy to miss one.
 With `allowPrivateIPAddress: false` (default), these addresses are blocked, because they are not `unicast` addresses.
-However, with `allowPrivateIPAddress: true`, these addresses are allowed unless they match `denyIPAddressList`.
 
-So, `denyIPAddressList` is not a security boundary when `allowPrivateIPAddress` is `true`.
 If you need to block specific private IP addresses like cloud metadata endpoint (`169.254.169.254`), we recommend the following:
 
 - Keep `allowPrivateIPAddress: false` and allow only the required addresses by `allowIPAddressList`
