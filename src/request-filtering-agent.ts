@@ -23,17 +23,89 @@ export interface RequestFilteringAgentOptions {
     // Allow address list
     // These values are preferred than denyAddressList
     // Default: []
+    /**
+     * @deprecated Use `filter` option instead. It will be removed in a future major version.
+     */
     allowIPAddressList?: string[];
     // Deny address list
     // Default: []
+    /**
+     * @deprecated Use `filter` option instead. It will be removed in a future major version.
+     */
     denyIPAddressList?: string[];
+    // Custom filter function that is called with the resolved and normalized IP address
+    // It is called after the built-in checks (allowPrivateIPAddress, allowMetaIPAddress, denyIPAddressList) pass.
+    // It is also called for the address that is allowed by allowIPAddressList.
+    // Only a strict `true` return value allows the connection.
+    // Default: undefined (no custom filter)
+    filter?: RequestFilteringAgentFilter;
 }
 
-export const DefaultRequestFilteringAgentOptions: Required<RequestFilteringAgentOptions> = {
+export interface RequestFilteringAgentFilterContext {
+    /**
+     * The original IP address before normalization.
+     * It is the value returned by DNS lookup or the literal IP address in the URL.
+     * Example: "::ffff:127.0.0.1"
+     */
+    raw: string;
+    /**
+     * IP family of the normalized address: 4 or 6
+     */
+    family: 4 | 6;
+    /**
+     * The hostname that is requested.
+     * It is undefined when the request uses a literal IP address.
+     */
+    host?: string;
+    /**
+     * The range name of the normalized address defined by ipaddr.js.
+     * Example: "unicast", "private", "loopback", "linkLocal", "unspecified"
+     * https://github.com/whitequark/ipaddr.js/blob/main/lib/ipaddr.js
+     */
+    range: string;
+}
+
+/**
+ * Custom filter function.
+ * @param address The normalized IP address after DNS resolution.
+ *   IPv4-mapped IPv6 addresses are converted to IPv4 (e.g. "::ffff:127.0.0.1" → "127.0.0.1"),
+ *   and IPv6 addresses are converted to the compact form (e.g. "0:0:0:0:0:0:0:1" → "::1").
+ * @param context The context that includes the raw address before normalization.
+ * @returns `true` to allow the connection. Any other value blocks the connection.
+ */
+export type RequestFilteringAgentFilter = (address: string, context: RequestFilteringAgentFilterContext) => boolean;
+
+type ResolvedRequestFilteringAgentOptions = Required<Omit<RequestFilteringAgentOptions, "filter">> &
+    Pick<RequestFilteringAgentOptions, "filter">;
+
+export const DefaultRequestFilteringAgentOptions: ResolvedRequestFilteringAgentOptions = {
     allowPrivateIPAddress: false,
     allowMetaIPAddress: false,
     allowIPAddressList: [],
-    denyIPAddressList: []
+    denyIPAddressList: [],
+    filter: undefined
+};
+
+const resolveOptions = (options?: RequestFilteringAgentOptions): ResolvedRequestFilteringAgentOptions => {
+    return {
+        allowPrivateIPAddress:
+            options && options.allowPrivateIPAddress !== undefined
+                ? options.allowPrivateIPAddress
+                : DefaultRequestFilteringAgentOptions.allowPrivateIPAddress,
+        allowMetaIPAddress:
+            options && options.allowMetaIPAddress !== undefined
+                ? options.allowMetaIPAddress
+                : DefaultRequestFilteringAgentOptions.allowMetaIPAddress,
+        allowIPAddressList:
+            options && options.allowIPAddressList
+                ? options.allowIPAddressList
+                : DefaultRequestFilteringAgentOptions.allowIPAddressList,
+        denyIPAddressList:
+            options && options.denyIPAddressList
+                ? options.denyIPAddressList
+                : DefaultRequestFilteringAgentOptions.denyIPAddressList,
+        filter: options && options.filter ? options.filter : DefaultRequestFilteringAgentOptions.filter
+    };
 };
 
 /**
@@ -82,6 +154,33 @@ const matchIPAddress = ({
 };
 
 /**
+ * Apply the custom filter function to the address
+ * It returns an error if filter does not return strict `true`
+ */
+const applyFilter = (
+    { address, host, family }: { address: string; host?: string; family?: string | number },
+    options: ResolvedRequestFilteringAgentOptions
+): undefined | Error => {
+    if (!options.filter) {
+        return;
+    }
+    // ipaddr.process converts IPv4-mapped IPv6 address to IPv4 address
+    const normalizedAddr = ipaddr.process(address);
+    const allowed = options.filter(normalizedAddr.toString(), {
+        raw: address,
+        family: normalizedAddr.kind() === "ipv4" ? 4 : 6,
+        host,
+        range: normalizedAddr.range()
+    });
+    if (allowed !== true) {
+        return new Error(
+            `DNS lookup ${address}(family:${family}, host:${host}) is not allowed. Because It is rejected by filter.`
+        );
+    }
+    return;
+};
+
+/**
  * validate the address that is matched the validation options
  * @param address ip address
  * @param host optional
@@ -90,7 +189,7 @@ const matchIPAddress = ({
  */
 const validateIPAddress = (
     { address, host, family }: { address: string; host?: string; family?: string | number },
-    options: Required<RequestFilteringAgentOptions>
+    options: ResolvedRequestFilteringAgentOptions
 ): undefined | Error => {
     // if it is not IP address, skip it
     if (net.isIP(address) === 0) {
@@ -110,7 +209,8 @@ const validateIPAddress = (
                     listName: "allowIPAddressList"
                 })
             ) {
-                return; // It is allowed
+                // It is allowed by allowIPAddressList, but filter is still applied
+                return applyFilter({ address, host, family }, options);
             }
         }
         const range = parsedAddr.range();
@@ -145,10 +245,11 @@ const validateIPAddress = (
                 );
             }
         }
+
+        return applyFilter({ address, host, family }, options);
     } catch (error) {
         return error as Error; // if can not parse IP address, throw error
     }
-    return;
 };
 
 // @types/node has a poor definition of this callback (uses "addresses" version if option.all = true)
@@ -158,7 +259,7 @@ type LookupCallback = LookupOneCallback | LookupAllCallback;
 
 const makeLookup = (
     createConnectionOptions: TcpNetConnectOpts,
-    requestFilterOptions: Required<RequestFilteringAgentOptions>
+    requestFilterOptions: ResolvedRequestFilteringAgentOptions
 ): Required<net.TcpSocketConnectOpts>["lookup"] => {
     // @ts-expect-error - @types/node has a poor definition of this callback
     return (hostname, options, cb: LookupCallback) => {
@@ -221,28 +322,11 @@ const createConnectionErrorSocket = (
  * A subclass of http.Agent with request filtering
  */
 export class RequestFilteringHttpAgent extends http.Agent {
-    private requestFilterOptions: Required<RequestFilteringAgentOptions>;
+    private requestFilterOptions: ResolvedRequestFilteringAgentOptions;
 
     constructor(options?: http.AgentOptions & RequestFilteringAgentOptions) {
         super(options);
-        this.requestFilterOptions = {
-            allowPrivateIPAddress:
-                options && options.allowPrivateIPAddress !== undefined
-                    ? options.allowPrivateIPAddress
-                    : DefaultRequestFilteringAgentOptions.allowPrivateIPAddress,
-            allowMetaIPAddress:
-                options && options.allowMetaIPAddress !== undefined
-                    ? options.allowMetaIPAddress
-                    : DefaultRequestFilteringAgentOptions.allowMetaIPAddress,
-            allowIPAddressList:
-                options && options.allowIPAddressList
-                    ? options.allowIPAddressList
-                    : DefaultRequestFilteringAgentOptions.allowIPAddressList,
-            denyIPAddressList:
-                options && options.denyIPAddressList
-                    ? options.denyIPAddressList
-                    : DefaultRequestFilteringAgentOptions.denyIPAddressList
-        };
+        this.requestFilterOptions = resolveOptions(options);
     }
 
     // override http.Agent#createConnection
@@ -271,18 +355,11 @@ export class RequestFilteringHttpAgent extends http.Agent {
  * A subclass of https.Agent with request filtering
  */
 export class RequestFilteringHttpsAgent extends https.Agent {
-    private requestFilterOptions: Required<RequestFilteringAgentOptions>;
+    private requestFilterOptions: ResolvedRequestFilteringAgentOptions;
 
     constructor(options?: https.AgentOptions & RequestFilteringAgentOptions) {
         super(options);
-        this.requestFilterOptions = {
-            allowPrivateIPAddress:
-                options && options.allowPrivateIPAddress !== undefined ? options.allowPrivateIPAddress : false,
-            allowMetaIPAddress:
-                options && options.allowMetaIPAddress !== undefined ? options.allowMetaIPAddress : false,
-            allowIPAddressList: options && options.allowIPAddressList ? options.allowIPAddressList : [],
-            denyIPAddressList: options && options.denyIPAddressList ? options.denyIPAddressList : []
-        };
+        this.requestFilterOptions = resolveOptions(options);
     }
 
     // override http.Agent#createConnection

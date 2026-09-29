@@ -114,18 +114,40 @@ export interface RequestFilteringAgentOptions {
     // https://tools.ietf.org/html/rfc6890
     // Default: false
     allowMetaIPAddress?: boolean;
+    // [Deprecated] Use `filter` instead.
     // Allow address list
     // It supports CIDR notation.
     // This values are preferred than denyAddressList
     // Default: []
     allowIPAddressList?: string[];
+    // [Deprecated] Use `filter` instead.
     // Deny address list
     // It supports CIDR notation.
     // The address is compared as it is. It is not a security boundary.
     // See "Security considerations for denyIPAddressList" section.
     // Default: []
     denyIPAddressList?: string[];
+    // Custom filter function that is called with the resolved and normalized IP address.
+    // It is called after the built-in checks (allowPrivateIPAddress, allowMetaIPAddress, denyIPAddressList) pass.
+    // It is also called for the address that is allowed by allowIPAddressList.
+    // Only a strict `true` return value allows the connection.
+    // Default: undefined
+    filter?: RequestFilteringAgentFilter;
 }
+export interface RequestFilteringAgentFilterContext {
+    // The original IP address before normalization. Example: "::ffff:7f00:1"
+    raw: string;
+    // IP family of the normalized address
+    family: 4 | 6;
+    // The requested hostname. It is undefined when the request uses a literal IP address.
+    host?: string;
+    // The range name of the normalized address defined by ipaddr.js
+    // Example: "unicast", "private", "loopback", "linkLocal", "unspecified"
+    range: string;
+}
+// `address` is the normalized IP address after DNS resolution.
+// IPv4-mapped IPv6 address is converted to IPv4 address (e.g. "::ffff:7f00:1" → "127.0.0.1")
+export type RequestFilteringAgentFilter = (address: string, context: RequestFilteringAgentFilterContext) => boolean;
 /**
  * A subclass of http.Agent with request filtering
  */
@@ -148,7 +170,69 @@ export declare const globalHttpsAgent: RequestFilteringHttpsAgent;
 export declare const useAgent: (url: string, options?: https.AgentOptions & RequestFilteringAgentOptions) => RequestFilteringHttpAgent | RequestFilteringHttpsAgent;
 ```
 
+### Example: Filter the request with `filter` function
+
+`filter` function receives the IP address after DNS resolution and normalization.
+The `context.raw` is the original IP address before normalization.
+The request is allowed only when `filter` returns `true`.
+
+`filter` is called after the built-in checks pass, and it is also called for the address that is allowed by `allowIPAddressList`.
+If `filter` returns a `Promise`, the request is blocked, because `filter` must return `true` synchronously.
+If you want to allow some private IP addresses, set `allowPrivateIPAddress: true` and check `context.range` in `filter`.
+
+```js
+const fetch = require("node-fetch");
+const { RequestFilteringHttpAgent } = require("request-filtering-agent");
+
+// Allow public IP addresses and 127.0.0.1, but disallow other private IP addresses
+const agent = new RequestFilteringHttpAgent({
+    allowPrivateIPAddress: true,
+    filter: (address, { range }) => {
+        return range === "unicast" || address === "127.0.0.1";
+    }
+});
+const url = 'http://127.0.0.1:8080/';
+fetch(url, {
+    agent: agent
+}).then(res => {
+    console.log(res); // OK
+});
+```
+
+### Example: Use CIDR in `filter` function
+
+`filter` does not provide CIDR matching.
+You can use Node.js built-in [`net.BlockList`](https://nodejs.org/api/net.html#class-netblocklist) to match CIDR ranges.
+
+```js
+const net = require("node:net");
+const fetch = require("node-fetch");
+const { RequestFilteringHttpAgent } = require("request-filtering-agent");
+
+// Migration from `allowIPAddressList: ["192.168.1.0/24"]`
+const allowList = new net.BlockList();
+allowList.addSubnet("192.168.1.0", 24, "ipv4");
+const allowAgent = new RequestFilteringHttpAgent({
+    allowPrivateIPAddress: true,
+    filter: (address, { family, range }) => {
+        return range === "unicast" || allowList.check(address, family === 4 ? "ipv4" : "ipv6");
+    }
+});
+
+// Migration from `allowPrivateIPAddress: true, denyIPAddressList: ["192.168.1.0/24"]`
+const denyList = new net.BlockList();
+denyList.addSubnet("192.168.1.0", 24, "ipv4");
+const denyAgent = new RequestFilteringHttpAgent({
+    allowPrivateIPAddress: true,
+    filter: (address, { family }) => {
+        return !denyList.check(address, family === 4 ? "ipv4" : "ipv6");
+    }
+});
+```
+
 ### Example: Create an Agent with options
+
+:warning: `allowIPAddressList` and `denyIPAddressList` are deprecated. Use `filter` instead.
 
 An agent that allow requesting `127.0.0.1`, but it disallows other Private IP.
 
