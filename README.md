@@ -127,6 +127,7 @@ export interface RequestFilteringAgentOptions {
     denyIPAddressList?: string[];
     // Custom filter function that is called with the resolved and normalized IP address.
     // It is called after the built-in checks (allowPrivateIPAddress, allowMetaIPAddress, denyIPAddressList) pass.
+    // It is also called for the address that is allowed by allowIPAddressList.
     // Only a strict `true` return value allows the connection.
     // Default: undefined
     filter?: RequestFilteringAgentFilter;
@@ -173,7 +174,8 @@ export declare const useAgent: (url: string, options?: https.AgentOptions & Requ
 The `context.raw` is the original IP address before normalization.
 The request is allowed only when `filter` returns `true`.
 
-`filter` is called after the built-in checks pass.
+`filter` is called after the built-in checks pass, and it is also called for the address that is allowed by `allowIPAddressList`.
+If `filter` returns a `Promise`, the request is blocked, because `filter` must return `true` synchronously.
 If you want to allow some private IP addresses, set `allowPrivateIPAddress: true` and check `context.range` in `filter`.
 
 ```js

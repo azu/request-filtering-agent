@@ -308,6 +308,25 @@ describe("request-filtering-agent", function () {
                 message: /Because It is rejected by filter/
             });
         });
+        it("should apply filter to the address that is allowed by allowIPAddressList", async () => {
+            const agent = new RequestFilteringHttpAgent({
+                allowIPAddressList: ["127.0.0.1"],
+                filter: () => false
+            });
+            await assert.rejects(fetch(`http://127.0.0.1:${TEST_PORT}`, { agent, timeout: 2000 }), {
+                message: /Because It is rejected by filter/
+            });
+        });
+        it("should block the request when filter returns a Promise", async () => {
+            const agent = new RequestFilteringHttpAgent({
+                allowPrivateIPAddress: true,
+                // @ts-expect-error - filter should return boolean synchronously
+                filter: async () => true
+            });
+            await assert.rejects(fetch(`http://127.0.0.1:${TEST_PORT}`, { agent, timeout: 2000 }), {
+                message: /Because It is rejected by filter/
+            });
+        });
         it("should apply filter to the https agent", async () => {
             const agent = new RequestFilteringHttpsAgent({
                 allowPrivateIPAddress: true,

@@ -35,6 +35,7 @@ export interface RequestFilteringAgentOptions {
     denyIPAddressList?: string[];
     // Custom filter function that is called with the resolved and normalized IP address
     // It is called after the built-in checks (allowPrivateIPAddress, allowMetaIPAddress, denyIPAddressList) pass.
+    // It is also called for the address that is allowed by allowIPAddressList.
     // Only a strict `true` return value allows the connection.
     // Default: undefined (no custom filter)
     filter?: RequestFilteringAgentFilter;
@@ -153,6 +154,33 @@ const matchIPAddress = ({
 };
 
 /**
+ * Apply the custom filter function to the address
+ * It returns an error if filter does not return strict `true`
+ */
+const applyFilter = (
+    { address, host, family }: { address: string; host?: string; family?: string | number },
+    options: ResolvedRequestFilteringAgentOptions
+): undefined | Error => {
+    if (!options.filter) {
+        return;
+    }
+    // ipaddr.process converts IPv4-mapped IPv6 address to IPv4 address
+    const normalizedAddr = ipaddr.process(address);
+    const allowed = options.filter(normalizedAddr.toString(), {
+        raw: address,
+        family: normalizedAddr.kind() === "ipv4" ? 4 : 6,
+        host,
+        range: normalizedAddr.range()
+    });
+    if (allowed !== true) {
+        return new Error(
+            `DNS lookup ${address}(family:${family}, host:${host}) is not allowed. Because It is rejected by filter.`
+        );
+    }
+    return;
+};
+
+/**
  * validate the address that is matched the validation options
  * @param address ip address
  * @param host optional
@@ -181,7 +209,8 @@ const validateIPAddress = (
                     listName: "allowIPAddressList"
                 })
             ) {
-                return; // It is allowed
+                // It is allowed by allowIPAddressList, but filter is still applied
+                return applyFilter({ address, host, family }, options);
             }
         }
         const range = parsedAddr.range();
@@ -217,26 +246,10 @@ const validateIPAddress = (
             }
         }
 
-        if (options.filter) {
-            // ipaddr.process converts IPv4-mapped IPv6 address to IPv4 address
-            const normalizedAddr = ipaddr.process(address);
-            const normalizedAddress = normalizedAddr.toString();
-            const allowed = options.filter(normalizedAddress, {
-                raw: address,
-                family: normalizedAddr.kind() === "ipv4" ? 4 : 6,
-                host,
-                range: normalizedAddr.range()
-            });
-            if (allowed !== true) {
-                return new Error(
-                    `DNS lookup ${address}(family:${family}, host:${host}) is not allowed. Because It is rejected by filter.`
-                );
-            }
-        }
+        return applyFilter({ address, host, family }, options);
     } catch (error) {
         return error as Error; // if can not parse IP address, throw error
     }
-    return;
 };
 
 // @types/node has a poor definition of this callback (uses "addresses" version if option.all = true)
