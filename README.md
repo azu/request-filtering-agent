@@ -121,6 +121,8 @@ export interface RequestFilteringAgentOptions {
     allowIPAddressList?: string[];
     // Deny address list
     // It supports CIDR notation.
+    // The address is compared as it is. It is not a security boundary.
+    // See "Security considerations for denyIPAddressList" section.
     // Default: []
     denyIPAddressList?: string[];
 }
@@ -177,19 +179,31 @@ fetch(urlInCIDR, {
 }).then(res => {
     console.log(res); // OK
 });
-
-// Deny requests to a specific CIDR range
-const agentWithDenyCIDR = new RequestFilteringHttpAgent({
-    allowPrivateIPAddress: true,
-    denyIPAddressList: ["192.168.1.0/24"],
-});
-const urlInDenyCIDR = 'http://192.168.1.1:8080/';
-fetch(urlInDenyCIDR, {
-    agent: agentWithDenyCIDR
-}).catch(err => {
-    console.err(err); // DNS lookup 192.168.1.1(family:4, host:192.168.1.1) is not allowed. Because It is defined in denyIPAddressList.
-});
 ```
+
+### Security considerations for `denyIPAddressList`
+
+`denyIPAddressList` is not a security boundary when `allowPrivateIPAddress` is `true`.
+The same IP address can be written in many forms, so it is hard to deny a destination as you intended.
+
+For example, `denyIPAddressList: ["169.254.169.254"]` does not block the following addresses, because they are written in another form.
+A single IP address in the list is compared as a string, and this library does not normalize the address.
+
+```js
+// All of them connect to 169.254.169.254, but they do not match "169.254.169.254" or "169.254.0.0/16"
+"::ffff:169.254.169.254"
+"::ffff:a9fe:a9fe"
+"0:0:0:0:0:ffff:a9fe:a9fe"
+```
+
+To deny the destination with `denyIPAddressList`, you need to list every form of the address, and it is easy to miss one.
+With `allowPrivateIPAddress: false` (default), these addresses are blocked, because they are not `unicast` addresses.
+
+If you need to block specific private IP addresses like cloud metadata endpoint (`169.254.169.254`), we recommend the following:
+
+- Keep `allowPrivateIPAddress: false` and allow only the required addresses by `allowIPAddressList`
+- Validate and normalize the host in your application before passing the request to this agent
+- Block the destination at the network layer (e.g. firewall, egress proxy, [IMDSv2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html))
 
 ## Related
 
