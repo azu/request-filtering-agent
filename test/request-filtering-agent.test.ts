@@ -213,6 +213,96 @@ describe("request-filtering-agent", function () {
         );
         assert.ok(error.cause);
     });
+    describe("filter", () => {
+        it("should pass the normalized address and the raw address to filter", async () => {
+            const calls: { address: string; raw: string; family: number; host?: string; range: string }[] = [];
+            const agent = new RequestFilteringHttpAgent({
+                allowPrivateIPAddress: true,
+                filter: (address, context) => {
+                    calls.push({ address, ...context });
+                    return false;
+                }
+            });
+            // IPv4-mapped IPv6 address is normalized to IPv4 address
+            // filter returns false to avoid depending on IPv6 support of the environment
+            await assert.rejects(fetch(`http://[::ffff:127.0.0.1]:${TEST_PORT}`, { agent, timeout: 2000 }), {
+                message: /Because It is rejected by filter/
+            });
+            assert.deepStrictEqual(calls, [
+                { address: "127.0.0.1", raw: "::ffff:7f00:1", family: 4, host: undefined, range: "loopback" }
+            ]);
+        });
+        it("should pass the requested hostname to filter after DNS lookup", async () => {
+            const calls: { address: string; host?: string }[] = [];
+            const agent = new RequestFilteringHttpAgent({
+                allowPrivateIPAddress: true,
+                filter: (address, { host }) => {
+                    calls.push({ address, host });
+                    return true;
+                }
+            });
+            await fetch(`http://localhost:${TEST_PORT}`, { agent, timeout: 2000 });
+            assert.ok(calls.length > 0);
+            for (const call of calls) {
+                assert.strictEqual(call.host, "localhost");
+                assert.ok(["127.0.0.1", "::1"].includes(call.address), `unexpected address: ${call.address}`);
+            }
+        });
+        it("should allow only 127.0.0.1 by filter, but other private ip is disallowed", async () => {
+            const agent = new RequestFilteringHttpAgent({
+                allowPrivateIPAddress: true,
+                filter: (address, { range }) => range === "unicast" || address === "127.0.0.1"
+            });
+            const res = await fetch(`http://127.0.0.1:${TEST_PORT}`, { agent, timeout: 2000 });
+            assert.strictEqual(res.status, 200);
+            await assert.rejects(fetch(`http://127.0.0.2:${TEST_PORT}`, { agent, timeout: 2000 }), {
+                message: /Because It is rejected by filter/
+            });
+        });
+        it("should block the request when filter returns a truthy non-boolean value", async () => {
+            const agent = new RequestFilteringHttpAgent({
+                allowPrivateIPAddress: true,
+                // @ts-expect-error - filter should return boolean
+                filter: () => 1
+            });
+            await assert.rejects(fetch(`http://127.0.0.1:${TEST_PORT}`, { agent, timeout: 2000 }), {
+                message: /Because It is rejected by filter/
+            });
+        });
+        it("should block the request when filter throws an error", async () => {
+            const agent = new RequestFilteringHttpAgent({
+                allowPrivateIPAddress: true,
+                filter: () => {
+                    throw new Error("filter error");
+                }
+            });
+            await assert.rejects(fetch(`http://127.0.0.1:${TEST_PORT}`, { agent, timeout: 2000 }), {
+                message: /filter error/
+            });
+        });
+        it("should not call filter when the built-in check blocks the address", async () => {
+            let called = false;
+            const agent = new RequestFilteringHttpAgent({
+                filter: () => {
+                    called = true;
+                    return true;
+                }
+            });
+            await assert.rejects(fetch(`http://127.0.0.1:${TEST_PORT}`, { agent, timeout: 2000 }), {
+                message: /It is private IP address/
+            });
+            assert.strictEqual(called, false);
+        });
+        it("should apply filter to the https agent", async () => {
+            const agent = new RequestFilteringHttpsAgent({
+                allowPrivateIPAddress: true,
+                filter: () => false
+            });
+            await assert.rejects(fetch(`https://127.0.0.1:${TEST_PORT}`, { agent, timeout: 2000 }), {
+                message: /Because It is rejected by filter/
+            });
+        });
+    });
     it("IPv4: should not request because it is private IP", async () => {
         const privateIPs = [
             `http://127.0.0.1:${TEST_PORT}`, //
