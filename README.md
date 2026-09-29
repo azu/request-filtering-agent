@@ -121,6 +121,8 @@ export interface RequestFilteringAgentOptions {
     allowIPAddressList?: string[];
     // Deny address list
     // It supports CIDR notation.
+    // The address is compared as it is. It is not a security boundary.
+    // See "Security considerations for denyIPAddressList" section.
     // Default: []
     denyIPAddressList?: string[];
 }
@@ -179,6 +181,8 @@ fetch(urlInCIDR, {
 });
 
 // Deny requests to a specific CIDR range
+// Note: denyIPAddressList with allowPrivateIPAddress: true is not a security boundary
+// See "Security considerations for denyIPAddressList" section
 const agentWithDenyCIDR = new RequestFilteringHttpAgent({
     allowPrivateIPAddress: true,
     denyIPAddressList: ["192.168.1.0/24"],
@@ -190,6 +194,24 @@ fetch(urlInDenyCIDR, {
     console.err(err); // DNS lookup 192.168.1.1(family:4, host:192.168.1.1) is not allowed. Because It is defined in denyIPAddressList.
 });
 ```
+
+### Security considerations for `denyIPAddressList`
+
+`denyIPAddressList` compares the IP address as it is.
+This library does not normalize the address, so the same destination can be written in another form that does not match the list.
+
+- IPv4-mapped IPv6 address: `::ffff:169.254.169.254` and `::ffff:a9fe:a9fe` connect to `169.254.169.254`, but they do not match `169.254.169.254` or `169.254.0.0/16`
+- Another IPv6 notation: `0:0:0:0:0:0:0:1` does not match `::1`
+
+With `allowPrivateIPAddress: false` (default), these addresses are blocked, because they are not `unicast` addresses.
+However, with `allowPrivateIPAddress: true`, these addresses are allowed unless they match `denyIPAddressList`.
+
+So, `denyIPAddressList` is not a security boundary when `allowPrivateIPAddress` is `true`.
+If you need to block specific private IP addresses like cloud metadata endpoint (`169.254.169.254`), we recommend the following:
+
+- Keep `allowPrivateIPAddress: false` and allow only the required addresses by `allowIPAddressList`
+- Validate and normalize the host in your application before passing the request to this agent
+- Block the destination at the network layer (e.g. firewall, egress proxy, [IMDSv2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html))
 
 ## Related
 
