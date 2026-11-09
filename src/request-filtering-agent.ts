@@ -65,6 +65,11 @@ const matchIPAddress = ({
             // if ipOrCIDR is a CIDR
             try {
                 const cidr = ipaddr.parseCIDR(ipOrCIDR);
+                // A CIDR of the other address family can never match the target.
+                // ipaddr's match() throws for it, which is not an invalid CIDR.
+                if (cidr[0].kind() !== targetAddress.parsed.kind()) {
+                    continue;
+                }
                 if (targetAddress.parsed.match(cidr)) {
                     return true;
                 }
