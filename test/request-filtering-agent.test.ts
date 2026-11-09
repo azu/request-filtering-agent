@@ -168,6 +168,67 @@ describe("request-filtering-agent", function () {
         );
         assert.ok(error.cause);
     });
+    it("should match mixed IPv4/IPv6 CIDRs in allowIPAddressList without warning", async (t) => {
+        const agent = new RequestFilteringHttpAgent({
+            allowIPAddressList: ["fd00::/8", "127.0.0.0/8", "10.0.0.0/8", "::1/128"],
+            allowPrivateIPAddress: false
+        });
+        const consoleMock = t.mock.method(console, "warn");
+        const allowedIPs = [`http://127.0.0.1:${TEST_PORT}`];
+        if (IS_IPV6_SUPPORTED) {
+            allowedIPs.push(`http://[::1]:${TEST_PORT}`);
+        }
+        for (const ipAddress of allowedIPs) {
+            try {
+                await fetch(ipAddress, {
+                    agent,
+                    timeout: 2000
+                });
+            } catch (error) {
+                assert.fail(new Error("should fetch, because it is allow, error" + error));
+            }
+        }
+        assert.strictEqual(consoleMock.mock.calls.length, 0);
+    });
+    it("should not treat a CIDR of the other address family as invalid", async (t) => {
+        const agent = new RequestFilteringHttpAgent({
+            allowIPAddressList: ["fd00::/8"],
+            denyIPAddressList: ["fd00::/8"],
+            allowPrivateIPAddress: false
+        });
+        const consoleMock = t.mock.method(console, "warn");
+        try {
+            await fetch(`http://127.0.0.1:${TEST_PORT}`, {
+                agent,
+                timeout: 2000
+            });
+            throw new ReferenceError("SHOULD NOT BE CALLED");
+        } catch (error) {
+            if (error instanceof ReferenceError) {
+                assert.fail(error);
+            }
+        }
+        assert.strictEqual(consoleMock.mock.calls.length, 0);
+    });
+    it("should deny with mixed IPv4/IPv6 CIDRs in denyIPAddressList without warning", async (t) => {
+        const agent = new RequestFilteringHttpAgent({
+            allowPrivateIPAddress: true,
+            denyIPAddressList: ["fd00::/8", "127.0.0.0/8"]
+        });
+        const consoleMock = t.mock.method(console, "warn");
+        try {
+            await fetch(`http://127.0.0.1:${TEST_PORT}`, {
+                agent,
+                timeout: 2000
+            });
+            throw new ReferenceError("SHOULD NOT BE CALLED");
+        } catch (error) {
+            if (error instanceof ReferenceError) {
+                assert.fail(error);
+            }
+        }
+        assert.strictEqual(consoleMock.mock.calls.length, 0);
+    });
     it("should deny CIDR range in denyIPAddressList", async () => {
         const agent = new RequestFilteringHttpAgent({
             allowPrivateIPAddress: true,
