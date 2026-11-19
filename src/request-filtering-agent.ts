@@ -176,6 +176,16 @@ const getRange = (parsedAddr: ipaddr.IPv4 | ipaddr.IPv6): string => {
     return range;
 };
 
+// ipaddr.js parses the deprecated notation "::a.b.c.d" as an IPv4-mapped IPv6 address (::ffff:a.b.c.d).
+// However, OS treats it as an IPv4-compatible IPv6 address (::/96), and the request connects to ::/96.
+// DNS lookup also returns this notation. For example, getaddrinfo returns "::8.8.8.8" for ::808:808.
+// Rewrite it to the notation that ipaddr.js parses in the same way as OS.
+// Example: "::8.8.8.8" → "0:0:0:0:0:0:8.8.8.8" (= ::808:808)
+const IPV4_COMPATIBLE_DOTTED_NOTATION = /^::(?=\d+\.\d+\.\d+\.\d+(?:%.*)?$)/;
+const toParsableAddress = (address: string): string => {
+    return address.replace(IPV4_COMPATIBLE_DOTTED_NOTATION, "0:0:0:0:0:0:");
+};
+
 /**
  * Apply the custom filter function to the address
  * It returns an error if filter does not return strict `true`
@@ -188,7 +198,7 @@ const applyFilter = (
         return;
     }
     // ipaddr.process converts IPv4-mapped IPv6 address to IPv4 address
-    const normalizedAddr = ipaddr.process(address);
+    const normalizedAddr = ipaddr.process(toParsableAddress(address));
     let allowed: unknown;
     try {
         allowed = options.filter(normalizedAddr.toString(), {
@@ -233,7 +243,7 @@ const validateIPAddress = (
         return;
     }
     try {
-        const parsedAddr = ipaddr.parse(address);
+        const parsedAddr = ipaddr.parse(toParsableAddress(address));
         // prefer allowed list
         if (options.allowIPAddressList.length > 0) {
             if (
