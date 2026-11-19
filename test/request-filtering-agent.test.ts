@@ -385,6 +385,26 @@ describe("request-filtering-agent", function () {
                 message: /filter error/
             });
         });
+        it("should block the request when filter throws a non-Error value", async () => {
+            // A falsy thrown value must not be treated as "no error"
+            for (const thrownValue of [undefined, null, "", 0, "string"]) {
+                const agent = new RequestFilteringHttpAgent({
+                    lookup: dnsServer.lookup,
+                    allowPrivateIPAddress: true,
+                    filter: () => {
+                        throw thrownValue;
+                    }
+                });
+                // literal IP address and the address resolved by DNS
+                for (const url of [`http://127.0.0.1:${TEST_PORT}`, `http://allowed.test:${TEST_PORT}`]) {
+                    await assert.rejects(
+                        fetch(url, { agent, timeout: 2000 }),
+                        { message: /Because filter throws a non-Error value/ },
+                        `thrown value: ${String(thrownValue)}, url: ${url}`
+                    );
+                }
+            }
+        });
         it("should not call filter when the built-in check blocks the address", async () => {
             let called = false;
             const agent = new RequestFilteringHttpAgent({

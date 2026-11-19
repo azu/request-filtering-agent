@@ -189,13 +189,26 @@ const applyFilter = (
     }
     // ipaddr.process converts IPv4-mapped IPv6 address to IPv4 address
     const normalizedAddr = ipaddr.process(address);
-    const allowed = options.filter(normalizedAddr.toString(), {
-        raw: address,
-        family: normalizedAddr.kind() === "ipv4" ? 4 : 6,
-        host,
-        // Use the same range as the built-in checks. IPv6 address outside of 2000::/3 is not "unicast"
-        range: getRange(normalizedAddr)
-    });
+    let allowed: unknown;
+    try {
+        allowed = options.filter(normalizedAddr.toString(), {
+            raw: address,
+            family: normalizedAddr.kind() === "ipv4" ? 4 : 6,
+            host,
+            // Use the same range as the built-in checks. IPv6 address outside of 2000::/3 is not "unicast"
+            range: getRange(normalizedAddr)
+        });
+    } catch (error) {
+        // filter can throw any value such as `undefined` or `null`.
+        // Always return an Error to block the connection, because a falsy value is treated as "no error".
+        if (error instanceof Error) {
+            return error;
+        }
+        return new Error(
+            `DNS lookup ${address}(family:${family}, host:${host}) is not allowed. Because filter throws a non-Error value.`,
+            { cause: error }
+        );
+    }
     if (allowed !== true) {
         return new Error(
             `DNS lookup ${address}(family:${family}, host:${host}) is not allowed. Because It is rejected by filter.`
