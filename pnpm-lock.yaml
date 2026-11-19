@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       ipaddr.js:
-        specifier: ^2.1.0
-        version: 2.2.0
+        specifier: ^2.5.0
+        version: 2.5.0
     devDependencies:
       '@types/ip':
         specifier: ^1.1.2
@@ -410,8 +410,8 @@ packages:
     resolution: {integrity: sha512-AXcZb6vzzrFAUE61HnN4mpLqd/cSIwNQjtNWR0euPm6y0iqx3G4gOXaIDdtdDwZmhwe82LA6+zinmW4UBWVePQ==}
     engines: {node: '>=16.17.0'}
 
-  ipaddr.js@2.2.0:
-    resolution: {integrity: sha512-Ag3wB2o37wslZS19hZqorUnrnzSkpOVy+IiiDEiTqNubEYpYuHWIf6K4psgN2ZWKExS4xhVCrRVfb/wfW8fWJA==}
+  ipaddr.js@2.5.0:
+    resolution: {integrity: sha512-aq+t5NAc+cS6rZQQVWC2x98CPqGtKKTMDd4Gaodv0wShnItdKg/51djkGJ1hqH+Oy0ivDftCbSLCQob8zso01w==}
     engines: {node: '>= 10'}
 
   is-fullwidth-code-point@3.0.0:
@@ -976,7 +976,7 @@ snapshots:
 
   human-signals@5.0.0: {}
 
-  ipaddr.js@2.2.0: {}
+  ipaddr.js@2.5.0: {}
 
   is-fullwidth-code-point@3.0.0: {}
 
