@@ -59,7 +59,9 @@ export interface RequestFilteringAgentFilterContext {
     host?: string;
     /**
      * The range name of the normalized address defined by ipaddr.js.
-     * Example: "unicast", "private", "loopback", "linkLocal", "unspecified"
+     * It is the same range that the built-in checks use:
+     * "unicast" is a public address, and an IPv6 address outside of 2000::/3 is "reserved" instead of "unicast".
+     * Example: "unicast", "private", "loopback", "linkLocal", "unspecified", "reserved"
      * https://github.com/whitequark/ipaddr.js/blob/main/lib/ipaddr.js
      */
     range: string;
@@ -189,7 +191,8 @@ const applyFilter = (
         raw: address,
         family: normalizedAddr.kind() === "ipv4" ? 4 : 6,
         host,
-        range: normalizedAddr.range()
+        // Use the same range as the built-in checks. IPv6 address outside of 2000::/3 is not "unicast"
+        range: getRange(normalizedAddr)
     });
     if (allowed !== true) {
         return new Error(

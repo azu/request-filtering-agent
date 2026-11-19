@@ -169,7 +169,9 @@ export interface RequestFilteringAgentFilterContext {
     // The requested hostname. It is undefined when the request uses a literal IP address.
     host?: string;
     // The range name of the normalized address defined by ipaddr.js
-    // Example: "unicast", "private", "loopback", "linkLocal", "unspecified"
+    // It is the same range that the built-in checks use:
+    // "unicast" is a public address, and an IPv6 address outside of 2000::/3 is "reserved" instead of "unicast".
+    // Example: "unicast", "private", "loopback", "linkLocal", "unspecified", "reserved"
     range: string;
 }
 // `address` is the normalized IP address after DNS resolution.

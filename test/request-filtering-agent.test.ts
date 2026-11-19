@@ -325,21 +325,33 @@ describe("request-filtering-agent", function () {
                 { address: "127.0.0.1", raw: "::ffff:7f00:1", family: 4, host: undefined, range: "loopback" }
             ]);
         });
+        it("should pass a non-unicast range for IPv6 address outside of 2000::/3", async () => {
+            const ranges: string[] = [];
+            const agent = new RequestFilteringHttpAgent({
+                allowPrivateIPAddress: true,
+                filter: (_address, { range }) => {
+                    ranges.push(range);
+                    return range === "unicast";
+                }
+            });
+            // IPv4-compatible IPv6 address of 127.0.0.1. ipaddr.js treats it as "unicast"
+            await assert.rejects(fetch(`http://[::7f00:1]:${TEST_PORT}`, { agent, timeout: 2000 }), {
+                message: /Because It is rejected by filter/
+            });
+            assert.deepStrictEqual(ranges, ["reserved"]);
+        });
         it("should pass the requested hostname to filter after DNS lookup", async () => {
             const calls: { address: string; host?: string }[] = [];
             const agent = new RequestFilteringHttpAgent({
+                lookup: dnsServer.lookup,
                 allowPrivateIPAddress: true,
                 filter: (address, { host }) => {
                     calls.push({ address, host });
                     return true;
                 }
             });
-            await fetch(`http://localhost:${TEST_PORT}`, { agent, timeout: 2000 });
-            assert.ok(calls.length > 0);
-            for (const call of calls) {
-                assert.strictEqual(call.host, "localhost");
-                assert.ok(["127.0.0.1", "::1"].includes(call.address), `unexpected address: ${call.address}`);
-            }
+            await fetch(`http://allowed.test:${TEST_PORT}`, { agent, timeout: 2000 });
+            assert.deepStrictEqual(calls, [{ address: "127.0.0.1", host: "allowed.test" }]);
         });
         it("should allow only 127.0.0.1 by filter, but other private ip is disallowed", async () => {
             const agent = new RequestFilteringHttpAgent({
