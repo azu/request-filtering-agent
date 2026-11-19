@@ -212,6 +212,11 @@ The request is allowed only when `filter` returns `true`.
 If `filter` returns a `Promise`, the request is blocked, because `filter` must return `true` synchronously.
 If you want to allow some private IP addresses, set `allowPrivateIPAddress: true` and check `context.range` in `filter`.
 
+Notes:
+
+- `filter` is called when the agent creates a new connection. It is not called for a request that reuses a keep-alive connection, because the address of the connection is already checked.
+- If DNS lookup returns multiple IP addresses, `filter` is called for each address. The request is blocked if `filter` rejects any of them.
+
 ```js
 const fetch = require("node-fetch");
 const { RequestFilteringHttpAgent } = require("request-filtering-agent");

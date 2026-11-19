@@ -37,6 +37,8 @@ export interface RequestFilteringAgentOptions {
     // It is called after the built-in checks (allowPrivateIPAddress, allowMetaIPAddress, denyIPAddressList) pass.
     // It is also called for the address that is allowed by allowIPAddressList.
     // Only a strict `true` return value allows the connection.
+    // It is called when a new connection is created. It is not called for a request that reuses a keep-alive connection.
+    // If DNS lookup returns multiple IP addresses, the request is blocked if filter rejects any of them.
     // Default: undefined (no custom filter)
     filter?: RequestFilteringAgentFilter;
 }
