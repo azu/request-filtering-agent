@@ -124,6 +124,34 @@ fetch(url, {
 
 It will prevent [DNS rebinding](https://en.wikipedia.org/wiki/DNS_rebinding)
 
+### Error handling
+
+This library blocks a request by an error. It does not throw the error synchronously, and it does not crash the process by itself.
+The error is passed to the request in the same way as other connection errors such as `ECONNREFUSED`.
+
+- Promise-based libraries such as `node-fetch`: the returned `Promise` is rejected. Use `try`/`catch` or `.catch()`.
+- Node.js's built-in `http.request` and `https.request`: the request emits an `error` event. Add an `error` listener to the request.
+
+```js
+const http = require("node:http");
+const { globalHttpAgent } = require("request-filtering-agent");
+
+const req = http.get("http://127.0.0.1:8080/", { agent: globalHttpAgent });
+// Without this listener, Node.js throws the error as an uncaught exception and the process exits
+req.on("error", (error) => {
+    console.error(error); // DNS lookup 127.0.0.1(...) is not allowed. Because, It is private IP address.
+});
+```
+
+:warning: Node.js exits the process when an `EventEmitter` emits an `error` event without a listener.
+It is [the behavior of Node.js](https://nodejs.org/api/events.html#error-events), and it is the same for any request error.
+A crash caused by a missing error handling in an application is not a vulnerability of this library.
+
+The same applies to the following cases:
+
+- An error thrown by the `filter` function blocks the request, and it is passed to the request as an error.
+- A custom `lookup` function that returns an invalid result (e.g. `undefined` instead of an array) behaves in the same way as Node.js's `http.Agent`. This library does not validate the result format of a custom `lookup` function.
+
 ## API
 
 ```ts
