@@ -9,18 +9,48 @@ import {
 } from "../src/request-filtering-agent.ts";
 import * as http from "node:http";
 import * as https from "node:https";
+import * as os from "node:os";
+import { startTestDnsServer, type DnsRecords, type TestDnsServer } from "./helper/dns-server.ts";
 
 const TEST_PORT = 12456;
-const IS_IPV6_SUPPORTED = true;
+// Detect IPv6 support from network interfaces. Some CI and container environments disable IPv6.
+const IS_IPV6_SUPPORTED = Object.values(os.networkInterfaces())
+    .flat()
+    .some((networkInterface) => networkInterface?.family === "IPv6");
+// E2E tests use real DNS and connect to the Internet. They run by default.
+// Set SKIP_NETWORK_TEST=1 to skip them in an environment without the Internet access
+const IS_NETWORK_TEST_SKIPPED = process.env.SKIP_NETWORK_TEST === "1";
+// DNS records of the test DNS server. The tests send real DNS queries to it instead of external DNS
+const TEST_DNS_RECORDS = {
+    "allowed.test": ["127.0.0.1"],
+    "loopback.test": ["127.0.0.1"],
+    "redirect-target.test": ["127.0.0.2"],
+    "private.test": ["192.168.0.1"],
+    "metadata.test": ["169.254.169.254"],
+    "meta.test": ["0.0.0.0"],
+    "loopback-v6.test": ["::1"],
+    "unique-local-v6.test": ["fd00::1"],
+    "ipv4-mapped-v6.test": ["::ffff:127.0.0.1"],
+    "ipv4-compatible-v6.test": ["::7f00:1"],
+    // public address and private address
+    "mixed.test": ["93.184.215.14", "127.0.0.1"]
+} satisfies DnsRecords;
 describe("request-filtering-agent", function () {
     let close = () => {
         return Promise.resolve();
     };
-    beforeEach(() => {
+    let dnsServer: TestDnsServer;
+    beforeEach(async () => {
+        dnsServer = await startTestDnsServer(TEST_DNS_RECORDS);
         return new Promise<void>((resolve) => {
             // response ok
             const server = http.createServer();
-            server.on("request", (_req, res) => {
+            server.on("request", (req, res) => {
+                if (req.url === "/redirect-to-private") {
+                    res.writeHead(302, { Location: `http://redirect-target.test:${TEST_PORT}/` });
+                    res.end();
+                    return;
+                }
                 res.writeHead(200, { "Content-Type": "text/plain" });
                 res.write("ok");
                 res.end();
@@ -41,7 +71,8 @@ describe("request-filtering-agent", function () {
             });
         });
     });
-    afterEach(() => {
+    afterEach(async () => {
+        await dnsServer.close();
         return close();
     });
     it("should request local ip address with allowPrivateIP: true", async () => {
@@ -418,12 +449,9 @@ describe("request-filtering-agent", function () {
             `http://0x7f.0x0.0x1:${TEST_PORT}`, // Hexidecimal
             `http://0x7f.0x1:${TEST_PORT}`, // Hexidecimal
             `http://0x7f000001:${TEST_PORT}`, // Hexidecimal
-            `http://127.0.0.1.nip.io:${TEST_PORT}/`, // wildcard domain
-            `https://127.0.0.1.nip.io:${TEST_PORT}/`, // wildcard domain
             `http://localhost:${TEST_PORT}`,
             `http://localhost`,
-            `https://localhost`,
-            `http://bit.ly/3z04dcF` // redirect to http://127.0.0.1.nip.io:12456
+            `https://localhost`
         ];
         for (const ipAddress of privateIPs) {
             try {
@@ -443,12 +471,107 @@ describe("request-filtering-agent", function () {
             }
         }
     });
+    // E2E: use real DNS and the Internet
+    it(
+        "E2E: should not request because the address resolved by real DNS is private",
+        { skip: IS_NETWORK_TEST_SKIPPED },
+        async () => {
+            const privateIPs = [
+                `http://127.0.0.1.nip.io:${TEST_PORT}/`, // wildcard domain
+                `https://127.0.0.1.nip.io:${TEST_PORT}/`, // wildcard domain
+                `http://169.254.169.254.nip.io` // wildcard domain
+            ];
+            for (const ipAddress of privateIPs) {
+                try {
+                    await fetch(ipAddress, {
+                        agent: useAgent(ipAddress),
+                        timeout: 10_000
+                    });
+                    throw new ReferenceError("SHOULD NOT BE CALLED");
+                } catch (error: any) {
+                    if (error instanceof ReferenceError) {
+                        assert.fail(error);
+                    }
+                    assert.ok(
+                        /Because, It is private IP address./i.test(error.message),
+                        `Failed at ${ipAddress}, error: ${error}`
+                    );
+                }
+            }
+        }
+    );
+    it("should not request because the address resolved by DNS is private", async () => {
+        const hostnames = Object.keys(TEST_DNS_RECORDS).filter((hostname) => hostname !== "allowed.test");
+        for (const hostname of hostnames) {
+            const urls = [`http://${hostname}:${TEST_PORT}/`, `https://${hostname}:${TEST_PORT}/`];
+            for (const url of urls) {
+                const agent = url.startsWith("https")
+                    ? new RequestFilteringHttpsAgent({ lookup: dnsServer.lookup })
+                    : new RequestFilteringHttpAgent({ lookup: dnsServer.lookup });
+                try {
+                    await fetch(url, {
+                        agent,
+                        timeout: 2000
+                    });
+                    throw new ReferenceError("SHOULD NOT BE CALLED");
+                } catch (error: any) {
+                    if (error instanceof ReferenceError) {
+                        assert.fail(new Error(`Failed at ${url}: it should be blocked`));
+                    }
+                    assert.match(
+                        error.message,
+                        /is not allowed\. Because, It is (private|meta) IP address\./,
+                        `Failed at ${url}, error: ${error}`
+                    );
+                    assert.ok(
+                        error.message.includes(`host:${hostname}`),
+                        `Failed at ${url}: error message should include the hostname, error: ${error}`
+                    );
+                }
+            }
+            // the test DNS server should receive the query
+            assert.ok(dnsServer.queriedHostnames.includes(hostname), `${hostname} should be queried`);
+        }
+    });
+    it("should request the address resolved by DNS when it is in allowIPAddressList", async () => {
+        const agent = new RequestFilteringHttpAgent({
+            lookup: dnsServer.lookup,
+            allowIPAddressList: ["127.0.0.1"]
+        });
+        const res = await fetch(`http://allowed.test:${TEST_PORT}/`, {
+            agent,
+            timeout: 2000
+        });
+        assert.strictEqual(res.status, 200);
+        assert.ok(dnsServer.queriedHostnames.includes("allowed.test"));
+    });
+    it("should not follow a redirect to the hostname that is resolved to private address", async () => {
+        // allowed.test (127.0.0.1) is allowed, but it redirects to redirect-target.test (127.0.0.2)
+        const agent = new RequestFilteringHttpAgent({
+            lookup: dnsServer.lookup,
+            allowIPAddressList: ["127.0.0.1"]
+        });
+        try {
+            await fetch(`http://allowed.test:${TEST_PORT}/redirect-to-private`, {
+                agent,
+                timeout: 2000
+            });
+            throw new ReferenceError("SHOULD NOT BE CALLED");
+        } catch (error: any) {
+            if (error instanceof ReferenceError) {
+                assert.fail(error);
+            }
+            assert.match(
+                error.message,
+                /DNS lookup 127\.0\.0\.2\(family:4, host:redirect-target\.test\) is not allowed/
+            );
+        }
+    });
     // FIXME: timout is not testable
     it("should not request because it is not resolve - timeout", async () => {
         const privateIPs = [
             // link address
             `http://169.254.169.254`,
-            `http://169.254.169.254.nip.io`,
             // aws
             `http://169.254.169.254/latest/user-data`,
             // gcp
@@ -468,7 +591,7 @@ describe("request-filtering-agent", function () {
             }
         }
     });
-    it("should request public ip address", async () => {
+    it("E2E: should request public ip address", { skip: IS_NETWORK_TEST_SKIPPED }, async () => {
         try {
             await fetch("http://example.com", {
                 agent: globalHttpAgent,
