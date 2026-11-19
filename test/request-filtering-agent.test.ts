@@ -378,7 +378,15 @@ describe("request-filtering-agent", function () {
             `http://[0:0:0:0:0:0:0:1]:${TEST_PORT}`, // IPv6 explicitly
             `http://[0:0:0:0:0:ffff:127.0.0.1]:${TEST_PORT}`, // IPv4-mapped IPv6 addresses
             `http://[::ffff:127.0.0.1]:${TEST_PORT}`, // IPv4-mapped IPv6 addresses
-            `http://[::ffff:7f00:1]:${TEST_PORT}` // IPv4-mapped IPv6 addresses
+            `http://[::ffff:7f00:1]:${TEST_PORT}`, // IPv4-mapped IPv6 addresses
+            `http://[::127.0.0.1]:${TEST_PORT}`, // IPv4-compatible IPv6 addresses (normalized to ::7f00:1)
+            `http://[::7f00:1]:${TEST_PORT}`, // IPv4-compatible IPv6 addresses
+            `http://[::169.254.169.254]:${TEST_PORT}`, // IPv4-compatible IPv6 addresses
+            `http://[::192.168.0.1]:${TEST_PORT}`, // IPv4-compatible IPv6 addresses
+            `http://[::8.8.8.8]:${TEST_PORT}`, // IPv4-compatible IPv6 addresses (deprecated, block all)
+            `http://[64:ff9b:1::127.0.0.1]:${TEST_PORT}`, // Local-use NAT64 prefix (RFC 8215)
+            `http://[fec0::1]:${TEST_PORT}`, // deprecated site-local
+            `http://[5f00::1]:${TEST_PORT}` // outside of 2000::/3 (not allocated as Global Unicast)
         ];
         for (const ipAddress of privateIPs) {
             try {
