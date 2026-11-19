@@ -42,7 +42,7 @@ Other IPv6 addresses are reserved, deprecated, or for special purposes, so this 
 
 :memo: An IPv6 address that embeds an IPv4 address (IPv4-mapped, NAT64, 6to4, etc.) is blocked even if the embedded IPv4 address is public.
 
-If you need to connect to a blocked address, use `allowIPAddressList` or `allowPrivateIPAddress`.
+If you need to connect to a blocked address, use `allowPrivateIPAddress` with `filter`. `allowIPAddressList` also works, but it is deprecated.
 
 :warning: Node.js's built-in `fetch` does not support `http.Agent`.
 
@@ -124,6 +124,34 @@ fetch(url, {
 
 It will prevent [DNS rebinding](https://en.wikipedia.org/wiki/DNS_rebinding)
 
+### Error handling
+
+This library blocks a request by an error. It does not throw the error synchronously, and it does not crash the process by itself.
+The error is passed to the request in the same way as other connection errors such as `ECONNREFUSED`.
+
+- Promise-based libraries such as `node-fetch`: the returned `Promise` is rejected. Use `try`/`catch` or `.catch()`.
+- Node.js's built-in `http.request` and `https.request`: the request emits an `error` event. Add an `error` listener to the request.
+
+```js
+const http = require("node:http");
+const { globalHttpAgent } = require("request-filtering-agent");
+
+const req = http.get("http://127.0.0.1:8080/", { agent: globalHttpAgent });
+// Without this listener, Node.js throws the error as an uncaught exception and the process exits
+req.on("error", (error) => {
+    console.error(error); // DNS lookup 127.0.0.1(...) is not allowed. Because, It is private IP address.
+});
+```
+
+:warning: Node.js exits the process when an `EventEmitter` emits an `error` event without a listener.
+It is [the behavior of Node.js](https://nodejs.org/api/events.html#error-events), and it is the same for any request error.
+A crash caused by a missing error handling in an application is not a vulnerability of this library.
+
+The same applies to the following cases:
+
+- An error thrown by the `filter` function blocks the request, and it is passed to the request as an error.
+- A custom `lookup` function that returns an invalid result (e.g. `undefined` instead of an array) behaves in the same way as Node.js's `http.Agent`. This library does not validate the result format of a custom `lookup` function.
+
 ## API
 
 ```ts
@@ -141,18 +169,42 @@ export interface RequestFilteringAgentOptions {
     // https://tools.ietf.org/html/rfc6890
     // Default: false
     allowMetaIPAddress?: boolean;
+    // [Deprecated] Use `filter` instead.
     // Allow address list
     // It supports CIDR notation.
     // This values are preferred than denyAddressList
     // Default: []
     allowIPAddressList?: string[];
+    // [Deprecated] Use `filter` instead.
     // Deny address list
     // It supports CIDR notation.
     // The address is compared as it is. It is not a security boundary.
     // See "Security considerations for denyIPAddressList" section.
     // Default: []
     denyIPAddressList?: string[];
+    // Custom filter function that is called with the resolved and normalized IP address.
+    // It is called after the built-in checks (allowPrivateIPAddress, allowMetaIPAddress, denyIPAddressList) pass.
+    // It is also called for the address that is allowed by allowIPAddressList.
+    // Only a strict `true` return value allows the connection.
+    // Default: undefined
+    filter?: RequestFilteringAgentFilter;
 }
+export interface RequestFilteringAgentFilterContext {
+    // The original IP address before normalization. Example: "::ffff:7f00:1"
+    raw: string;
+    // IP family of the normalized address
+    family: 4 | 6;
+    // The requested hostname. It is undefined when the request uses a literal IP address.
+    host?: string;
+    // The range name of the normalized address defined by ipaddr.js
+    // It is the same range that the built-in checks use:
+    // "unicast" is a public address, and an IPv6 address outside of 2000::/3 is "reserved" instead of "unicast".
+    // Example: "unicast", "private", "loopback", "linkLocal", "unspecified", "reserved"
+    range: string;
+}
+// `address` is the normalized IP address after DNS resolution.
+// IPv4-mapped IPv6 address is converted to IPv4 address (e.g. "::ffff:7f00:1" → "127.0.0.1")
+export type RequestFilteringAgentFilter = (address: string, context: RequestFilteringAgentFilterContext) => boolean;
 /**
  * A subclass of http.Agent with request filtering
  */
@@ -178,7 +230,74 @@ export declare const useAgent: (
 ) => RequestFilteringHttpAgent | RequestFilteringHttpsAgent;
 ```
 
+### Example: Filter the request with `filter` function
+
+`filter` function receives the IP address after DNS resolution and normalization.
+The `context.raw` is the original IP address before normalization.
+The request is allowed only when `filter` returns `true`.
+
+`filter` is called after the built-in checks pass, and it is also called for the address that is allowed by `allowIPAddressList`.
+If `filter` returns a `Promise`, the request is blocked, because `filter` must return `true` synchronously.
+If you want to allow some private IP addresses, set `allowPrivateIPAddress: true` and check `context.range` in `filter`.
+
+Notes:
+
+- `filter` is called when the agent creates a new connection. It is not called for a request that reuses a keep-alive connection, because the address of the connection is already checked.
+- If DNS lookup returns multiple IP addresses, `filter` is called for each address. The request is blocked if `filter` rejects any of them.
+
+```js
+const fetch = require("node-fetch");
+const { RequestFilteringHttpAgent } = require("request-filtering-agent");
+
+// Allow public IP addresses and 127.0.0.1, but disallow other private IP addresses
+const agent = new RequestFilteringHttpAgent({
+    allowPrivateIPAddress: true,
+    filter: (address, { range }) => {
+        return range === "unicast" || address === "127.0.0.1";
+    }
+});
+const url = 'http://127.0.0.1:8080/';
+fetch(url, {
+    agent: agent
+}).then(res => {
+    console.log(res); // OK
+});
+```
+
+### Example: Use CIDR in `filter` function
+
+`filter` does not provide CIDR matching.
+You can use Node.js built-in [`net.BlockList`](https://nodejs.org/api/net.html#class-netblocklist) to match CIDR ranges.
+
+```js
+const net = require("node:net");
+const fetch = require("node-fetch");
+const { RequestFilteringHttpAgent } = require("request-filtering-agent");
+
+// Migration from `allowIPAddressList: ["192.168.1.0/24"]`
+const allowList = new net.BlockList();
+allowList.addSubnet("192.168.1.0", 24, "ipv4");
+const allowAgent = new RequestFilteringHttpAgent({
+    allowPrivateIPAddress: true,
+    filter: (address, { family, range }) => {
+        return range === "unicast" || allowList.check(address, family === 4 ? "ipv4" : "ipv6");
+    }
+});
+
+// Migration from `allowPrivateIPAddress: true, denyIPAddressList: ["192.168.1.0/24"]`
+const denyList = new net.BlockList();
+denyList.addSubnet("192.168.1.0", 24, "ipv4");
+const denyAgent = new RequestFilteringHttpAgent({
+    allowPrivateIPAddress: true,
+    filter: (address, { family }) => {
+        return !denyList.check(address, family === 4 ? "ipv4" : "ipv6");
+    }
+});
+```
+
 ### Example: Create an Agent with options
+
+:warning: `allowIPAddressList` and `denyIPAddressList` are deprecated. Use `filter` instead.
 
 An agent that allow requesting `127.0.0.1`, but it disallows other Private IP.
 
@@ -213,6 +332,8 @@ fetch(urlInCIDR, {
 
 ### Security considerations for `denyIPAddressList`
 
+:warning: `denyIPAddressList` is deprecated. Use `filter` instead. `filter` receives the normalized IP address, so `::ffff:169.254.169.254` is passed as `169.254.169.254`.
+
 `denyIPAddressList` is not a security boundary when `allowPrivateIPAddress` is `true`.
 The same IP address can be written in many forms, so it is hard to deny a destination as you intended.
 
@@ -231,7 +352,7 @@ With `allowPrivateIPAddress: false` (default), these addresses are blocked, beca
 
 If you need to block specific private IP addresses like cloud metadata endpoint (`169.254.169.254`), we recommend the following:
 
-- Keep `allowPrivateIPAddress: false` and allow only the required addresses by `allowIPAddressList`
+- Keep `allowPrivateIPAddress: false`, or use `filter` to allow only the required addresses. `filter` receives the normalized IP address and its range
 - Validate and normalize the host in your application before passing the request to this agent
 - Block the destination at the network layer (e.g. firewall, egress proxy, [IMDSv2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html))
 
