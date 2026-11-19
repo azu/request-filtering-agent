@@ -86,6 +86,20 @@ const matchIPAddress = ({
     return false;
 };
 
+// IANA allocates only 2000::/3 as IPv6 Global Unicast. Everything else is reserved by IETF or special-purpose.
+// https://www.iana.org/assignments/ipv6-address-space/ipv6-address-space.xhtml
+// ipaddr.js returns "unicast" for any address that is not in its special ranges list,
+// so deprecated or unassigned ranges such as IPv4-compatible IPv6 addresses (::/96) are treated as "unicast".
+// Treat an IPv6 address as "unicast" only if it is in 2000::/3.
+const IPV6_GLOBAL_UNICAST_RANGE = ipaddr.parseCIDR("2000::/3");
+const getRange = (parsedAddr: ipaddr.IPv4 | ipaddr.IPv6): string => {
+    const range = parsedAddr.range();
+    if (range === "unicast" && parsedAddr.kind() === "ipv6" && !parsedAddr.match(IPV6_GLOBAL_UNICAST_RANGE)) {
+        return "reserved";
+    }
+    return range;
+};
+
 /**
  * validate the address that is matched the validation options
  * @param address ip address
@@ -118,7 +132,7 @@ const validateIPAddress = (
                 return; // It is allowed
             }
         }
-        const range = parsedAddr.range();
+        const range = getRange(parsedAddr);
         if (!options.allowMetaIPAddress) {
             // address === "0.0.0.0" || address == "::"
             if (range === "unspecified") {
