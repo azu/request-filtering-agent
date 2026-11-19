@@ -16,6 +16,34 @@ This library blocks the request to these IP addresses by default.
 
 So, This library block the request to non-`unicast` IP addresses.
 
+### Which IP addresses are allowed?
+
+This library allows the request only if the destination IP address is a public address.
+It checks the IP address that the request actually connects to, after DNS lookup.
+
+- IPv4: the address is allowed if [ipaddr.js](https://github.com/whitequark/ipaddr.js) classifies it as `unicast`
+- IPv6: the address is allowed if ipaddr.js classifies it as `unicast` **and** it is in `2000::/3`
+
+`2000::/3` is the only range that IANA allocates as Global Unicast ([IANA IPv6 Address Space](https://www.iana.org/assignments/ipv6-address-space/ipv6-address-space.xhtml)).
+Public IPv6 addresses on the Internet start with `2` or `3`, like `2001:4860:4860::8888`.
+Other IPv6 addresses are reserved, deprecated, or for special purposes, so this library blocks them even if ipaddr.js does not know the range.
+
+| Destination                               | Example                                             | Result  |
+| ----------------------------------------- | --------------------------------------------------- | ------- |
+| Public IPv4 address                       | `8.8.8.8`                                           | Allowed |
+| Public IPv6 address in `2000::/3`         | `2001:4860:4860::8888`                              | Allowed |
+| Loopback                                  | `127.0.0.1`, `::1`                                  | Blocked |
+| Private and link-local address            | `10.0.0.1`, `169.254.169.254`, `fc00::1`, `fe80::1` | Blocked |
+| Meta address                              | `0.0.0.0`, `::`                                     | Blocked |
+| IPv4-mapped IPv6 address                  | `::ffff:127.0.0.1`, `::ffff:8.8.8.8`                | Blocked |
+| IPv4-compatible IPv6 address (deprecated) | `::127.0.0.1` (= `::7f00:1`)                        | Blocked |
+| Special range in `2000::/3`               | `2001:db8::1`, `2002::1` (6to4)                     | Blocked |
+| Other IPv6 address out of `2000::/3`      | `fec0::1`, `64:ff9b::808:808` (NAT64)               | Blocked |
+
+:memo: An IPv6 address that embeds an IPv4 address (IPv4-mapped, NAT64, 6to4, etc.) is blocked even if the embedded IPv4 address is public.
+
+If you need to connect to a blocked address, use `allowIPAddressList` or `allowPrivateIPAddress`.
+
 :warning: Node.js's built-in `fetch` does not support `http.Agent`.
 
 - [Support nodejs/undici · Issue #23 · azu/request-filtering-agent](https://github.com/azu/request-filtering-agent/issues/23)
@@ -31,10 +59,9 @@ This library provides Node.js's [http.Agent](https://nodejs.org/api/http.html#ht
 - [axios](https://github.com/axios/axios)
 - [got](https://github.com/sindresorhus/got)
 - [@cypress/request](https://github.com/cypress-io/request)
-  - :memo: [Request](https://github.com/request/request) is deprecated and it has SSRF issue
-  - [CVE-2023-28155 Request allows a bypass of SSRF mitigations via an attacker-controller server that does a cross-protocol redirect · Issue #3442 · request/request](https://github.com/request/request/issues/3442)
-  - [Server-Side Request Forgery in Request · CVE-2023-28155 · GitHub Advisory Database](https://github.com/advisories/GHSA-p8p7-x288-28g6)
-
+    - :memo: [Request](https://github.com/request/request) is deprecated and it has SSRF issue
+    - [CVE-2023-28155 Request allows a bypass of SSRF mitigations via an attacker-controller server that does a cross-protocol redirect · Issue #3442 · request/request](https://github.com/request/request/issues/3442)
+    - [Server-Side Request Forgery in Request · CVE-2023-28155 · GitHub Advisory Database](https://github.com/advisories/GHSA-p8p7-x288-28g6)
 
 `request-filtering-agent` works with these libraries!
 
@@ -61,11 +88,11 @@ The agent blocks the request to [Private network](https://en.wikipedia.org/wiki/
 ```js
 const fetch = require("node-fetch");
 const { useAgent } = require("request-filtering-agent");
-const url = 'http://127.0.0.1:8080/';
+const url = "http://127.0.0.1:8080/";
 fetch(url, {
     // use http or https agent for url
     agent: useAgent(url)
-}).catch(err => {
+}).catch((err) => {
     console.err(err); // DNS lookup 127.0.0.1(family:4, host:127.0.0.1.nip.io) is not allowed. Because, It is private IP address.
 });
 ```
@@ -87,10 +114,10 @@ Example code:
 ```js
 const fetch = require("node-fetch");
 const { useAgent } = require("request-filtering-agent");
-const url = 'http://127.0.0.1.nip.io:8080/';
+const url = "http://127.0.0.1.nip.io:8080/";
 fetch(url, {
     agent: useAgent(url) // use http or https agent for url
-}).catch(err => {
+}).catch((err) => {
     console.err(err); // DNS lookup 127.0.0.1(family:4, host:127.0.0.1.nip.io) is not allowed. Because, It is private IP address.
 });
 ```
@@ -145,7 +172,10 @@ export declare const globalHttpsAgent: RequestFilteringHttpsAgent;
  * return http or https agent
  * @param url
  */
-export declare const useAgent: (url: string, options?: https.AgentOptions & RequestFilteringAgentOptions) => RequestFilteringHttpAgent | RequestFilteringHttpsAgent;
+export declare const useAgent: (
+    url: string,
+    options?: https.AgentOptions & RequestFilteringAgentOptions
+) => RequestFilteringHttpAgent | RequestFilteringHttpsAgent;
 ```
 
 ### Example: Create an Agent with options
@@ -159,24 +189,24 @@ const { RequestFilteringHttpAgent } = require("request-filtering-agent");
 // Create http agent that allow 127.0.0.1, but it disallow other private ip
 const agent = new RequestFilteringHttpAgent({
     allowIPAddressList: ["127.0.0.1"], // it is preferred than allowPrivateIPAddress option
-    allowPrivateIPAddress: false, // Default: false
+    allowPrivateIPAddress: false // Default: false
 });
 // 127.0.0.1 is private ip address, but it is allowed
-const url = 'http://127.0.0.1:8080/';
+const url = "http://127.0.0.1:8080/";
 fetch(url, {
     agent: agent
-}).then(res => {
+}).then((res) => {
     console.log(res); // OK
 });
 
 // Allow requests to a specific CIDR range
 const agentWithCIDR = new RequestFilteringHttpAgent({
-    allowIPAddressList: ["192.168.1.0/24"],
+    allowIPAddressList: ["192.168.1.0/24"]
 });
-const urlInCIDR = 'http://192.168.1.1:8080/';
+const urlInCIDR = "http://192.168.1.1:8080/";
 fetch(urlInCIDR, {
     agent: agentWithCIDR
-}).then(res => {
+}).then((res) => {
     console.log(res); // OK
 });
 ```
@@ -191,9 +221,9 @@ A single IP address in the list is compared as a string, and this library does n
 
 ```js
 // All of them connect to 169.254.169.254, but they do not match "169.254.169.254" or "169.254.0.0/16"
-"::ffff:169.254.169.254"
-"::ffff:a9fe:a9fe"
-"0:0:0:0:0:ffff:a9fe:a9fe"
+"::ffff:169.254.169.254";
+"::ffff:a9fe:a9fe";
+"0:0:0:0:0:ffff:a9fe:a9fe";
 ```
 
 To deny the destination with `denyIPAddressList`, you need to list every form of the address, and it is easy to miss one.
@@ -224,7 +254,7 @@ Install devDependencies and Run `yarn test`:
 
 :memo: This testing require IPv6 supports:
 
-- Travis CI: NG 
+- Travis CI: NG
 - GitHub Actions: OK
 
 ## Contributing
