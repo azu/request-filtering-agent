@@ -248,14 +248,14 @@ See [Releases page](https://github.com/azu/request-filtering-agent/releases).
 
 ## Running tests
 
-Install devDependencies and Run `yarn test`:
+Install devDependencies and Run `pnpm test`:
 
-    yarn test
+    pnpm test
 
-:memo: This testing require IPv6 supports:
+The tests start a DNS server on `127.0.0.1` and send real DNS queries to it, so most tests do not depend on external DNS.
 
-- Travis CI: NG
-- GitHub Actions: OK
+- Tests named `E2E:` use real DNS (`nip.io`) and connect to the Internet. Set `SKIP_NETWORK_TEST=1` to skip them
+- Tests that connect to an IPv6 address are skipped if the environment does not support IPv6
 
 ## Contributing
 
