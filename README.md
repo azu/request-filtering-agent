@@ -42,7 +42,7 @@ Other IPv6 addresses are reserved, deprecated, or for special purposes, so this 
 
 :memo: An IPv6 address that embeds an IPv4 address (IPv4-mapped, NAT64, 6to4, etc.) is blocked even if the embedded IPv4 address is public.
 
-If you need to connect to a blocked address, use `allowIPAddressList` or `allowPrivateIPAddress`.
+If you need to connect to a blocked address, use `allowPrivateIPAddress` with `filter`. `allowIPAddressList` also works, but it is deprecated.
 
 :warning: Node.js's built-in `fetch` does not support `http.Agent`.
 
@@ -304,6 +304,8 @@ fetch(urlInCIDR, {
 
 ### Security considerations for `denyIPAddressList`
 
+:warning: `denyIPAddressList` is deprecated. Use `filter` instead. `filter` receives the normalized IP address, so `::ffff:169.254.169.254` is passed as `169.254.169.254`.
+
 `denyIPAddressList` is not a security boundary when `allowPrivateIPAddress` is `true`.
 The same IP address can be written in many forms, so it is hard to deny a destination as you intended.
 
@@ -322,7 +324,7 @@ With `allowPrivateIPAddress: false` (default), these addresses are blocked, beca
 
 If you need to block specific private IP addresses like cloud metadata endpoint (`169.254.169.254`), we recommend the following:
 
-- Keep `allowPrivateIPAddress: false` and allow only the required addresses by `allowIPAddressList`
+- Keep `allowPrivateIPAddress: false`, or use `filter` to allow only the required addresses. `filter` receives the normalized IP address and its range
 - Validate and normalize the host in your application before passing the request to this agent
 - Block the destination at the network layer (e.g. firewall, egress proxy, [IMDSv2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html))
 
