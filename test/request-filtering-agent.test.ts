@@ -112,6 +112,21 @@ describe("request-filtering-agent", function () {
         }
     });
 
+    it("::0.0.0.0 is metaAddress, it is disabled even if allowPrivateIPAddress is true", async () => {
+        const agent = new RequestFilteringHttpAgent({
+            allowPrivateIPAddress: true
+        });
+        // "::0.0.0.0" is the dotted notation of "::". It is not IPv4-mapped IPv6 address (::ffff:0.0.0.0)
+        // WHATWG URL normalizes the host, so pass the host directly
+        const request = (host: string) => {
+            return new Promise<void>((resolve, reject) => {
+                const req = http.get({ host, port: TEST_PORT, agent, timeout: 2000 }, () => resolve());
+                req.on("error", reject);
+            });
+        };
+        await assert.rejects(request("::0.0.0.0"), { message: /It is meta IP address/ });
+    });
+
     it("should allow http://127.0.0.1, but other private ip is disallowed", async () => {
         const agent = new RequestFilteringHttpAgent({
             allowIPAddressList: ["127.0.0.1", "::1"],
