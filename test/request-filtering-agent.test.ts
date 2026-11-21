@@ -33,6 +33,8 @@ const TEST_DNS_RECORDS = {
     "unique-local-v6.test": ["fd00::1"],
     "ipv4-mapped-v6.test": ["::ffff:127.0.0.1"],
     "ipv4-compatible-v6.test": ["::7f00:1"],
+    // DNS lookup returns it as "::8.8.8.8"
+    "ipv4-compatible-public-v6.test": ["::808:808"],
     // public address and private address
     "mixed.test": ["93.184.215.14", "127.0.0.1"]
 } satisfies DnsRecords;
@@ -108,6 +110,21 @@ describe("request-filtering-agent", function () {
                 }
             }
         }
+    });
+
+    it("::0.0.0.0 is metaAddress, it is disabled even if allowPrivateIPAddress is true", async () => {
+        const agent = new RequestFilteringHttpAgent({
+            allowPrivateIPAddress: true
+        });
+        // "::0.0.0.0" is the dotted notation of "::". It is not IPv4-mapped IPv6 address (::ffff:0.0.0.0)
+        // WHATWG URL normalizes the host, so pass the host directly
+        const request = (host: string) => {
+            return new Promise<void>((resolve, reject) => {
+                const req = http.get({ host, port: TEST_PORT, agent, timeout: 2000 }, () => resolve());
+                req.on("error", reject);
+            });
+        };
+        await assert.rejects(request("::0.0.0.0"), { message: /It is meta IP address/ });
     });
 
     it("should allow http://127.0.0.1, but other private ip is disallowed", async () => {
@@ -339,6 +356,54 @@ describe("request-filtering-agent", function () {
                 message: /Because It is rejected by filter/
             });
             assert.deepStrictEqual(ranges, ["reserved"]);
+        });
+        it("should not treat the dotted IPv4-compatible IPv6 address as IPv4 address", async () => {
+            const calls: { address: string; raw: string; family: number; host?: string; range: string }[] = [];
+            const agent = new RequestFilteringHttpAgent({
+                allowPrivateIPAddress: true,
+                filter: (address, context) => {
+                    calls.push({ address, ...context });
+                    return context.range === "unicast";
+                }
+            });
+            // "::8.8.8.8" is ::808:808 (IPv4-compatible), not ::ffff:808:808 (IPv4-mapped)
+            // WHATWG URL normalizes the host, so pass the host directly
+            const request = (host: string) => {
+                return new Promise<void>((resolve, reject) => {
+                    const req = http.get({ host, port: TEST_PORT, agent, timeout: 2000 }, () => resolve());
+                    req.on("error", reject);
+                });
+            };
+            await assert.rejects(request("::8.8.8.8"), { message: /Because It is rejected by filter/ });
+            await assert.rejects(request("::127.0.0.1"), { message: /Because It is rejected by filter/ });
+            assert.deepStrictEqual(calls, [
+                { address: "::808:808", raw: "::8.8.8.8", family: 6, host: undefined, range: "reserved" },
+                { address: "::7f00:1", raw: "::127.0.0.1", family: 6, host: undefined, range: "reserved" }
+            ]);
+        });
+        it("should not treat the dotted IPv4-compatible IPv6 address resolved by DNS as IPv4 address", async () => {
+            const calls: { address: string; raw: string; family: number; host?: string; range: string }[] = [];
+            const agent = new RequestFilteringHttpAgent({
+                lookup: dnsServer.lookup,
+                allowPrivateIPAddress: true,
+                filter: (address, context) => {
+                    calls.push({ address, ...context });
+                    return context.range === "unicast";
+                }
+            });
+            await assert.rejects(
+                fetch(`http://ipv4-compatible-public-v6.test:${TEST_PORT}`, { agent, timeout: 2000 }),
+                { message: /Because It is rejected by filter/ }
+            );
+            assert.deepStrictEqual(calls, [
+                {
+                    address: "::808:808",
+                    raw: "::8.8.8.8",
+                    family: 6,
+                    host: "ipv4-compatible-public-v6.test",
+                    range: "reserved"
+                }
+            ]);
         });
         it("should pass the requested hostname to filter after DNS lookup", async () => {
             const calls: { address: string; host?: string }[] = [];
