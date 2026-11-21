@@ -176,11 +176,24 @@ const getRange = (parsedAddr: ipaddr.IPv4 | ipaddr.IPv6): string => {
     return range;
 };
 
-// ipaddr.js parses the deprecated notation "::a.b.c.d" as an IPv4-mapped IPv6 address (::ffff:a.b.c.d).
-// However, OS treats it as an IPv4-compatible IPv6 address (::/96), and the request connects to ::/96.
-// DNS lookup also returns this notation. For example, getaddrinfo returns "::8.8.8.8" for ::808:808.
-// Rewrite it to the notation that ipaddr.js parses in the same way as OS.
-// Example: "::8.8.8.8" → "0:0:0:0:0:0:8.8.8.8" (= ::808:808)
+// Why this conversion is needed:
+// This library must check the same address that the request actually connects to.
+// However, ipaddr.js and OS read "::a.b.c.d" as different addresses.
+//
+//   "::8.8.8.8"
+//     - OS (the actual destination): ::808:808      = IPv4-compatible IPv6 address (::/96)
+//     - ipaddr.js (our check)      : ::ffff:808:808 = IPv4-mapped IPv6 address (8.8.8.8)
+//
+// Without this conversion, this library checks an address that is not the destination:
+// - filter receives ("8.8.8.8", { family: 4, range: "unicast" }), but the request connects to ::808:808.
+//   The same address written as "::808:808" is passed as ("::808:808", { family: 6, range: "reserved" }).
+// - "::0.0.0.0" is the same as "::", but it is not treated as a meta address.
+//
+// "0:0:0:0:0:0:a.b.c.d" is the same address as "::a.b.c.d", and ipaddr.js reads it in the same way as OS.
+// So, rewrite only the notation. The address itself is not changed.
+//   "::8.8.8.8" → "0:0:0:0:0:0:8.8.8.8" (= ::808:808)
+//
+// This notation is not only a literal host. getaddrinfo returns "::8.8.8.8" for an AAAA record of ::808:808.
 const IPV4_COMPATIBLE_DOTTED_NOTATION = /^::(?=\d+\.\d+\.\d+\.\d+(?:%.*)?$)/;
 const toParsableAddress = (address: string): string => {
     return address.replace(IPV4_COMPATIBLE_DOTTED_NOTATION, "0:0:0:0:0:0:");
